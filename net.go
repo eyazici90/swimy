@@ -35,12 +35,12 @@ func listen(ctx context.Context, tcpLn *net.TCPListener) error {
 			if err != nil {
 				return fmt.Errorf("accepting tcp: %w", err)
 			}
-			go streamConn(ctx, conn)
+			go handleConn(ctx, conn)
 		}
 	}
 }
 
-func streamConn(ctx context.Context, conn net.Conn) {
+func handleConn(ctx context.Context, conn net.Conn) {
 	for {
 		var buff []byte
 		select {
