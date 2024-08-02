@@ -11,8 +11,8 @@ type Membership struct {
 	cfg *Config
 
 	memberMu sync.RWMutex
-	me       member
-	others   []member
+	me       *member
+	others   []*member
 
 	stop func()
 }
@@ -23,22 +23,22 @@ func New() (*Membership, error) {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
 
-	var mms Membership
-	mms.me = member{
+	var ms Membership
+	ms.me = &member{
 		addr:  tcpLn.Addr(),
 		state: alive,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	mms.stop = cancel
+	ms.stop = cancel
 
 	go func() {
-		_ = mms.schedule(ctx, time.Millisecond*10, mms.gossip)
+		_ = ms.schedule(ctx, time.Millisecond*10, ms.gossip)
 	}()
 	go func() {
 		_ = listen(ctx, tcpLn)
 	}()
-	return &mms, nil
+	return &ms, nil
 }
 
 func (ms *Membership) Join(existing ...string) error {
@@ -75,4 +75,18 @@ func (ms *Membership) gossip() error {
 
 func (ms *Membership) broadCast(failure any) error {
 	return nil
+}
+
+func (ms *Membership) setAlive(m *member) {
+	ms.memberMu.Lock()
+	defer ms.memberMu.Unlock()
+
+	m.state = alive
+}
+
+func (ms *Membership) setDead(m *member) {
+	ms.memberMu.Lock()
+	defer ms.memberMu.Unlock()
+
+	m.state = dead
 }
