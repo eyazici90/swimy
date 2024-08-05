@@ -74,7 +74,7 @@ func dial(ctx context.Context, addr net.Addr) (net.Conn, error) {
 func writeMsg(ctx context.Context, conn net.Conn, msg []byte) error {
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("send msg: %w", ctx.Err())
+		return fmt.Errorf("write msg: %w", ctx.Err())
 	default:
 		if _, err := conn.Write(msg); err != nil {
 			return fmt.Errorf("write to conn: %w", err)

@@ -7,13 +7,12 @@ import (
 	"log"
 	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 type Membership struct {
-	cfg     *Config
-	metrics Metrics
+	cfg      *Config
+	observer observation
 
 	membersMu sync.RWMutex
 	me        *Member
@@ -33,10 +32,14 @@ func New(cfg *Config) (*Membership, error) {
 		addr:  nTCP.listener.Addr(),
 		state: alive,
 	}
+	setDefaults(&cfg)
+	ms.observer = observation{
+		onJoinCallback:  cfg.OnJoin,
+		onLeaveCallback: cfg.OnLeave,
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ms.stop = cancel
-	setDefaults(&cfg)
 	go func() {
 		if err := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); err != nil {
 			log.Print(err)
@@ -66,6 +69,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			since: time.Now().UTC(),
 		}
 		ms.becomeMembers(m)
+		ms.observer.onJoin(m)
 	}
 	return nil
 }
@@ -83,7 +87,7 @@ func (ms *Membership) Me() *Member {
 }
 
 func (ms *Membership) Metrics() Metrics {
-	return ms.metrics
+	return ms.observer.metrics
 }
 
 func (ms *Membership) schedule(ctx context.Context, interval time.Duration, fn func(ctx context.Context) error) error {
@@ -111,7 +115,7 @@ func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
 	if err = writeMsg(ctx, conn, msg.bytes()); err != nil {
 		return fmt.Errorf("write msg to conn: %w", err)
 	}
-	atomic.AddUint32(&ms.metrics.SentNum, 1)
+	ms.observer.pinged()
 	return nil
 }
 
@@ -121,12 +125,12 @@ func (ms *Membership) stream(rw io.ReadWriter) error {
 		return fmt.Errorf("read from conn: %w", err)
 	}
 
-	switch msg[0] {
+	switch msgType := msg[0]; msgType {
 	case pingMsgType:
 		log.Printf("received ping from: %s", string(msg[1:]))
 	default:
-		log.Print("unknown msg type!!!")
+		return fmt.Errorf("unkown msg type: %d", msgType)
 	}
-	atomic.AddUint32(&ms.metrics.ReceivedNum, 1)
+	ms.observer.received()
 	return nil
 }
