@@ -6,10 +6,15 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 )
 
-func newTCPln() (*net.TCPListener, error) {
+type netTCP struct {
+	protocolVersion uint8
+	listener        *net.TCPListener
+	streamReader    func(reader io.Reader) error
+}
+
+func newNetTCP(sr func(reader io.Reader) error) (*netTCP, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
@@ -18,40 +23,43 @@ func newTCPln() (*net.TCPListener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listen tcp: %w", err)
 	}
-	return tcpLn, nil
+
+	return &netTCP{
+		listener:     tcpLn,
+		streamReader: sr,
+	}, nil
 }
 
-func listen(ctx context.Context, tcpLn *net.TCPListener, rstream func(reader io.Reader) error) error {
+func (nt *netTCP) listen(ctx context.Context) error {
 	defer func() {
-		_ = tcpLn.Close()
+		_ = nt.listener.Close()
 	}()
 
-	_ = tcpLn.SetDeadline(time.Now().Add(time.Millisecond * 50))
 	for {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("listen tcp: %w", ctx.Err())
 		default:
-			conn, err := tcpLn.AcceptTCP()
+			conn, err := nt.listener.AcceptTCP()
 			if err != nil {
 				return fmt.Errorf("accepting tcp: %w", err)
 			}
-			go handleConn(ctx, conn, rstream)
+			go handleConn(ctx, conn, nt.streamReader)
 		}
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, rstream func(reader io.Reader) error) {
+func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.Reader) error) {
 	defer func() {
 		_ = conn.Close()
 	}()
-
+	// _ = conn.SetDeadline(time.Now().Add( time.Millisecond * 50))
 	var err error
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		err = rstream(conn)
+		err = sr(conn)
 	}
 	if err != nil {
 		log.Printf("handle conn: %s", ctx.Err())

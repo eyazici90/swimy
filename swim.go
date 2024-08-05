@@ -23,14 +23,14 @@ type Membership struct {
 }
 
 func New(cfg *Config) (*Membership, error) {
-	tcpLn, err := newTCPln()
+	var ms Membership
+	nTCP, err := newNetTCP(ms.readStream)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
 
-	var ms Membership
 	ms.me = &Member{
-		addr:  tcpLn.Addr(),
+		addr:  nTCP.listener.Addr(),
 		state: alive,
 	}
 
@@ -38,10 +38,14 @@ func New(cfg *Config) (*Membership, error) {
 	ms.stop = cancel
 
 	go func() {
-		_ = ms.schedule(ctx, time.Millisecond*10, ms.gossip)
+		if se := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); se != nil {
+			log.Print(se)
+		}
 	}()
 	go func() {
-		_ = listen(ctx, tcpLn, ms.readStream)
+		if le := nTCP.listen(ctx); le != nil {
+			log.Print(le)
+		}
 	}()
 	return &ms, nil
 }
