@@ -3,6 +3,7 @@ package swim
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -20,7 +21,7 @@ func newTCPln() (*net.TCPListener, error) {
 	return tcpLn, nil
 }
 
-func listen(ctx context.Context, tcpLn *net.TCPListener) error {
+func listen(ctx context.Context, tcpLn *net.TCPListener, rstream func(reader io.Reader) error) error {
 	defer func() {
 		_ = tcpLn.Close()
 	}()
@@ -35,22 +36,25 @@ func listen(ctx context.Context, tcpLn *net.TCPListener) error {
 			if err != nil {
 				return fmt.Errorf("accepting tcp: %w", err)
 			}
-			go handleConn(ctx, conn)
+			go handleConn(ctx, conn, rstream)
 		}
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn) {
-	for {
-		var buff []byte
-		select {
-		case <-ctx.Done():
-			log.Printf("streaming on conn: %s", ctx.Err())
-		default:
-			if _, err := conn.Read(buff); err != nil {
-				log.Printf("read from conn: %s", err)
-			}
-		}
+func handleConn(ctx context.Context, conn net.Conn, rstream func(reader io.Reader) error) {
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	var err error
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	default:
+		err = rstream(conn)
+	}
+	if err != nil {
+		log.Printf("handle conn: %s", ctx.Err())
 	}
 }
 
