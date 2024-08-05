@@ -15,8 +15,12 @@ const (
 	left
 )
 
-type member struct {
+type Member struct {
 	addr  net.Addr
 	state memberState
 	since time.Time
+}
+
+func (m *Member) Addr() net.Addr {
+	return m.addr
 }
