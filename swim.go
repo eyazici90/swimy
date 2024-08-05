@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -36,7 +37,7 @@ func New(cfg *Config) (*Membership, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ms.stop = cancel
-
+	setDefaults(&cfg)
 	go func() {
 		if se := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); se != nil {
 			log.Print(se)
