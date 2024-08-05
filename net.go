@@ -11,10 +11,10 @@ import (
 type netTCP struct {
 	protocolVersion uint8
 	listener        *net.TCPListener
-	streamReader    func(reader io.Reader) error
+	stream          func(rw io.ReadWriter) error
 }
 
-func newNetTCP(sr func(reader io.Reader) error) (*netTCP, error) {
+func newNetTCP(sr func(rw io.ReadWriter) error) (*netTCP, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
@@ -25,8 +25,8 @@ func newNetTCP(sr func(reader io.Reader) error) (*netTCP, error) {
 	}
 
 	return &netTCP{
-		listener:     tcpLn,
-		streamReader: sr,
+		listener: tcpLn,
+		stream:   sr,
 	}, nil
 }
 
@@ -44,16 +44,16 @@ func (nt *netTCP) listen(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("accepting tcp: %w", err)
 			}
-			go handleConn(ctx, conn, nt.streamReader)
+			go handleConn(ctx, conn, nt.stream)
 		}
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.Reader) error) {
+func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.ReadWriter) error) {
 	defer func() {
 		_ = conn.Close()
 	}()
-	// _ = conn.SetDeadline(time.Now().Add( time.Millisecond * 50))
+
 	var err error
 	select {
 	case <-ctx.Done():

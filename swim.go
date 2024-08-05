@@ -1,7 +1,6 @@
 package swim
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -25,7 +24,7 @@ type Membership struct {
 
 func New(cfg *Config) (*Membership, error) {
 	var ms Membership
-	nTCP, err := newNetTCP(ms.streamRead)
+	nTCP, err := newNetTCP(ms.stream)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
@@ -108,19 +107,25 @@ func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
 	if err != nil {
 		return fmt.Errorf("dial to addr: %w", err)
 	}
-	p := pingMsg{from: ms.me.Addr().String()}
-	if err = writeMsg(ctx, conn, p); err != nil {
+	msg := pingMsg{from: ms.me.Addr()}
+	if err = writeMsg(ctx, conn, msg.bytes()); err != nil {
 		return fmt.Errorf("write msg to conn: %w", err)
 	}
 	atomic.AddUint32(&ms.metrics.SentNum, 1)
 	return nil
 }
 
-func (ms *Membership) streamRead(r io.Reader) error {
-	buffR := bufio.NewReader(r)
-	buff := [1]byte{}
-	if _, err := io.ReadFull(buffR, buff[:]); err != nil {
+func (ms *Membership) stream(rw io.ReadWriter) error {
+	msg := [16]byte{}
+	if _, err := rw.Read(msg[:]); err != nil {
 		return fmt.Errorf("read from conn: %w", err)
+	}
+
+	switch msg[0] {
+	case pingMsgType:
+		log.Printf("received ping from: %s", string(msg[1:]))
+	default:
+		log.Print("unknown msg type!!!")
 	}
 	atomic.AddUint32(&ms.metrics.ReceivedNum, 1)
 	return nil
