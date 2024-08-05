@@ -39,13 +39,13 @@ func New(cfg *Config) (*Membership, error) {
 	ms.stop = cancel
 	setDefaults(&cfg)
 	go func() {
-		if se := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); se != nil {
-			log.Print(se)
+		if err := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); err != nil {
+			log.Print(err)
 		}
 	}()
 	go func() {
-		if le := nTCP.listen(ctx); le != nil {
-			log.Print(le)
+		if err := nTCP.listen(ctx); err != nil {
+			log.Print(err)
 		}
 	}()
 	return &ms, nil
@@ -57,7 +57,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 		if err != nil {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
-		if err = ms.sendPing(ctx, addr); err != nil {
+		if err = ms.ping(ctx, addr); err != nil {
 			return fmt.Errorf("send ping: %w", err)
 		}
 
@@ -66,9 +66,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			state: alive,
 			since: time.Now().UTC(),
 		}
-		ms.membersMu.Lock()
-		ms.others = append(ms.others, m)
-		ms.membersMu.Unlock()
+		ms.discovered(m)
 	}
 	return nil
 }
@@ -105,7 +103,7 @@ func (ms *Membership) schedule(ctx context.Context, interval time.Duration, fn f
 	}
 }
 
-func (ms *Membership) sendPing(ctx context.Context, addr net.Addr) error {
+func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
 	conn, err := dial(ctx, addr)
 	if err != nil {
 		return fmt.Errorf("dial to addr: %w", err)
