@@ -36,7 +36,7 @@ func (ms *Membership) setAlives(members ...*Member) {
 	}
 }
 
-func (ms *Membership) discovered(members ...*Member) {
+func (ms *Membership) becomeMembers(members ...*Member) {
 	ms.membersMu.Lock()
 	for _, m := range members {
 		ms.others = append(ms.others, m)

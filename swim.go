@@ -25,7 +25,7 @@ type Membership struct {
 
 func New(cfg *Config) (*Membership, error) {
 	var ms Membership
-	nTCP, err := newNetTCP(ms.readStream)
+	nTCP, err := newNetTCP(ms.streamRead)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
@@ -66,7 +66,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			state: alive,
 			since: time.Now().UTC(),
 		}
-		ms.discovered(m)
+		ms.becomeMembers(m)
 	}
 	return nil
 }
@@ -108,14 +108,15 @@ func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
 	if err != nil {
 		return fmt.Errorf("dial to addr: %w", err)
 	}
-	if err = writeMsg(ctx, conn, []byte{pingMsg}); err != nil {
+	p := pingMsg{from: ms.me.Addr().String()}
+	if err = writeMsg(ctx, conn, p); err != nil {
 		return fmt.Errorf("write msg to conn: %w", err)
 	}
 	atomic.AddUint32(&ms.metrics.SentNum, 1)
 	return nil
 }
 
-func (ms *Membership) readStream(r io.Reader) error {
+func (ms *Membership) streamRead(r io.Reader) error {
 	buffR := bufio.NewReader(r)
 	buff := [1]byte{}
 	if _, err := io.ReadFull(buffR, buff[:]); err != nil {
