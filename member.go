@@ -50,6 +50,19 @@ func (ms *Membership) setAliveAddrs(addrs ...net.Addr) {
 	}
 }
 
+func (ms *Membership) setLeaveAddr(addrs ...net.Addr) {
+	ms.membersMu.Lock()
+	defer ms.membersMu.Unlock()
+
+	now := time.Now().UTC()
+	for _, m := range ms.others {
+		if slices.Contains(addrs, m.Addr()) {
+			m.state = left
+			m.since = now
+		}
+	}
+}
+
 func (ms *Membership) becomeMembers(members ...*Member) {
 	ms.membersMu.Lock()
 	for _, m := range members {
