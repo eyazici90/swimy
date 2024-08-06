@@ -67,11 +67,11 @@ func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.ReadWriter
 }
 
 func dial(ctx context.Context, addr net.Addr) (net.Conn, error) {
-	var dr net.Dialer
-	return dr.DialContext(ctx, "tcp", addr.String())
+	var nd net.Dialer
+	return nd.DialContext(ctx, "tcp", addr.String())
 }
 
-func writeMsg(ctx context.Context, conn net.Conn, msg []byte) error {
+func writeTo(ctx context.Context, conn net.Conn, msg []byte) error {
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("write msg: %w", ctx.Err())
