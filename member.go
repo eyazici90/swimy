@@ -2,6 +2,7 @@ package swim
 
 import (
 	"net"
+	"slices"
 	"time"
 )
 
@@ -33,6 +34,19 @@ func (ms *Membership) setAlives(members ...*Member) {
 	for _, m := range members {
 		m.state = alive
 		m.since = now
+	}
+}
+
+func (ms *Membership) setAliveAddrs(addrs ...net.Addr) {
+	ms.membersMu.Lock()
+	defer ms.membersMu.Unlock()
+
+	now := time.Now().UTC()
+	for _, m := range ms.others {
+		if slices.Contains(addrs, m.Addr()) {
+			m.state = alive
+			m.since = now
+		}
 	}
 }
 

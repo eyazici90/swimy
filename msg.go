@@ -5,14 +5,22 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"time"
 )
 
+var allMsgTypes = [...]string{
+	unknownMsgType:  "unknown",
+	pingMsgType:     "ping",
+	joinReqMsgType:  "join-req",
+	leaveReqMsgType: "leave-req",
+}
+
 const (
-	pingMsgType    = 1
-	joinReqMsgType = 2
+	unknownMsgType = iota
+	pingMsgType
+	joinReqMsgType
+	leaveReqMsgType
 )
 
 type joinReq struct {
@@ -44,8 +52,8 @@ func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
 	}
 	defer func() { _ = conn.Close() }()
 
-	msg := pingMsg{from: ms.me.Addr()}
-	if err = writeTo(ctx, conn, msg.bytes()); err != nil {
+	out := pingMsg{from: ms.me.Addr()}
+	if err = writeTo(ctx, conn, out.bytes()); err != nil {
 		return fmt.Errorf("write msg to conn: %w", err)
 	}
 	ms.observer.pinged()
@@ -58,30 +66,38 @@ func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
 		return fmt.Errorf("dial to addr: %w", err)
 	}
 	defer func() { _ = conn.Close() }()
-	req := joinReq{from: ms.me.Addr()}
-	if err = writeTo(ctx, conn, req.bytes()); err != nil {
+
+	out := joinReq{from: ms.me.Addr()}
+	if err = writeTo(ctx, conn, out.bytes()); err != nil {
 		return fmt.Errorf("write msg to conn: %w", err)
 	}
 	return nil
 }
 
 func (ms *Membership) stream(rw io.ReadWriter) error {
+	var (
+		msgType byte
+		addr    net.Addr
+	)
+	defer func() {
+		ms.observer.received(msgType, addr.String())
+	}()
+
 	msg := [16]byte{}
 	if _, err := rw.Read(msg[:]); err != nil {
 		return fmt.Errorf("read from conn: %w", err)
 	}
 
-	msgType := msg[0]
-	defer ms.observer.received()
+	msgType = msg[0]
+	addr, err := net.ResolveTCPAddr("tcp", string(msg[1:]))
+	if err != nil {
+		return fmt.Errorf("resolve tcp addr: %w", err)
+	}
 
 	switch msgType {
 	case pingMsgType:
-		log.Printf("received ping from: %s", string(msg[1:]))
+		ms.setAliveAddrs(addr)
 	case joinReqMsgType:
-		addr, err := net.ResolveTCPAddr("tcp", string(msg[1:]))
-		if err != nil {
-			return fmt.Errorf("resolve tcp addr: %w", err)
-		}
 		m := &Member{
 			addr:  addr,
 			state: alive,
