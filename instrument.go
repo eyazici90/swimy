@@ -1,6 +1,9 @@
 package swim
 
-import "sync/atomic"
+import (
+	"log"
+	"sync/atomic"
+)
 
 type Metrics struct {
 	ActiveMembers        uint32
@@ -16,11 +19,12 @@ type observation struct {
 func (o *observation) onJoin(m *Member) {
 	o.onJoinCallback(m)
 	atomic.AddUint32(&o.metrics.ActiveMembers, 1)
+	log.Printf("someone joined addr: %s", m.addr)
 }
 
 func (o *observation) onLeave(m *Member) {
 	o.onLeaveCallback(m)
-	atomic.AddUint32(&o.metrics.ActiveMembers, -1)
+	atomic.AddUint32(&o.metrics.ActiveMembers, 0)
 }
 
 func (o *observation) pinged() {

@@ -6,8 +6,20 @@ import (
 )
 
 const (
-	pingMsgType = 1
+	pingMsgType    = 1
+	joinReqMsgType = 2
 )
+
+type joinReq struct {
+	from net.Addr
+}
+
+func (j joinReq) bytes() []byte {
+	var buff bytes.Buffer
+	buff.WriteByte(joinReqMsgType)
+	buff.WriteString(j.from.String())
+	return buff.Bytes()
+}
 
 type pingMsg struct {
 	from net.Addr
