@@ -24,3 +24,24 @@ func TestSwim_New(t *testing.T) {
 	assert.Greater(t, ms1.Metrics().ReceivedNum, uint32(0))
 	assert.Greater(t, ms2.Metrics().SentNum, uint32(0))
 }
+
+func TestSwim_Leave(t *testing.T) {
+	ctx := context.Background()
+
+	ms1, err := swim.New(nil)
+	require.NoError(t, err)
+	defer ms1.Stop()
+
+	ms2, err := swim.New(nil)
+	require.NoError(t, err)
+	defer ms2.Stop()
+	err = ms2.Join(ctx, ms1.Me().Addr().String())
+	require.NoError(t, err)
+
+	err = ms2.Leave(ctx)
+	require.NoError(t, err)
+
+	<-time.After(time.Millisecond * 150)
+	assert.Equal(t, uint32(0), ms1.Metrics().ActiveMembers)
+	assert.Equal(t, uint32(0), ms2.Metrics().ActiveMembers)
+}

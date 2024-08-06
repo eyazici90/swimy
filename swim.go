@@ -73,7 +73,12 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 	return nil
 }
 
-func (ms *Membership) Leave() error {
+func (ms *Membership) Leave(ctx context.Context) error {
+	out := leaveReq{from: ms.me.Addr()}
+	if err := ms.broadCast(ctx, out.encode()); err != nil {
+		return fmt.Errorf("broadcasting :%w", err)
+	}
+	ms.observer.onLeave(ms.Me())
 	return nil
 }
 

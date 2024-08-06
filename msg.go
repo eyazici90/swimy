@@ -104,6 +104,9 @@ func (ms *Membership) stream(rw io.ReadWriter) error {
 		}
 		ms.becomeMembers(m)
 		ms.observer.onJoin(m)
+	case leaveReqMsgType:
+		ms.setLeaveAddr(addr)
+		ms.observer.onLeave(nil)
 	default:
 		return fmt.Errorf("unkown msg type: %d", msgType)
 	}

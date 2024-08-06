@@ -24,7 +24,8 @@ func (o *observation) onJoin(m *Member) {
 
 func (o *observation) onLeave(m *Member) {
 	o.onLeaveCallback(m)
-	atomic.AddUint32(&o.metrics.ActiveMembers, 0)
+	atomic.AddUint32(&o.metrics.ActiveMembers, ^uint32(0))
+	log.Printf("someone left addr")
 }
 
 func (o *observation) pinged() {
