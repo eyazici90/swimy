@@ -23,53 +23,52 @@ const (
 	leaveReqMsgType
 )
 
-type joinReq struct {
-	from net.Addr
+type (
+	joinReq struct {
+		from net.Addr
+	}
+	leaveReq struct {
+		from net.Addr
+	}
+	pingMsg struct {
+		from net.Addr
+	}
+)
+
+func (j joinReq) encode() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(joinReqMsgType)
+	buf.WriteString(j.from.String())
+	return buf.Bytes()
 }
 
-func (j joinReq) bytes() []byte {
-	var buff bytes.Buffer
-	buff.WriteByte(joinReqMsgType)
-	buff.WriteString(j.from.String())
-	return buff.Bytes()
+func (j leaveReq) encode() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(leaveReqMsgType)
+	buf.WriteString(j.from.String())
+	return buf.Bytes()
 }
 
-type pingMsg struct {
-	from net.Addr
-}
-
-func (p pingMsg) bytes() []byte {
-	var buff bytes.Buffer
-	buff.WriteByte(pingMsgType)
-	buff.WriteString(p.from.String())
-	return buff.Bytes()
+func (p pingMsg) encode() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(pingMsgType)
+	buf.WriteString(p.from.String())
+	return buf.Bytes()
 }
 
 func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
-	conn, err := dial(ctx, addr)
-	if err != nil {
-		return fmt.Errorf("dial to addr: %w", err)
-	}
-	defer func() { _ = conn.Close() }()
-
 	out := pingMsg{from: ms.me.Addr()}
-	if err = writeTo(ctx, conn, out.bytes()); err != nil {
-		return fmt.Errorf("write msg to conn: %w", err)
+	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
+		return fmt.Errorf("send to: %w", err)
 	}
 	ms.observer.pinged()
 	return nil
 }
 
 func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
-	conn, err := dial(ctx, addr)
-	if err != nil {
-		return fmt.Errorf("dial to addr: %w", err)
-	}
-	defer func() { _ = conn.Close() }()
-
 	out := joinReq{from: ms.me.Addr()}
-	if err = writeTo(ctx, conn, out.bytes()); err != nil {
-		return fmt.Errorf("write msg to conn: %w", err)
+	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
+		return fmt.Errorf("send to: %w", err)
 	}
 	return nil
 }

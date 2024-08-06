@@ -66,17 +66,19 @@ func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.ReadWriter
 	}
 }
 
-func dial(ctx context.Context, addr net.Addr) (net.Conn, error) {
+func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 	var nd net.Dialer
-	return nd.DialContext(ctx, "tcp", addr.String())
-}
+	conn, err := nd.DialContext(ctx, "tcp", addr.String())
+	if err != nil {
+		return fmt.Errorf("dial to addr: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
 
-func writeTo(ctx context.Context, conn net.Conn, msg []byte) error {
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("write msg: %w", ctx.Err())
+		return fmt.Errorf("send msg: %w", ctx.Err())
 	default:
-		if _, err := conn.Write(msg); err != nil {
+		if _, err = conn.Write(msg); err != nil {
 			return fmt.Errorf("write to conn: %w", err)
 		}
 	}
