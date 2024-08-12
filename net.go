@@ -14,8 +14,8 @@ type netTCP struct {
 	stream          func(rw io.ReadWriter) error
 }
 
-func newNetTCP(sr func(rw io.ReadWriter) error) (*netTCP, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+func newNetTCP(port uint16, stream func(rw io.ReadWriter) error) (*netTCP, error) {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
 	}
@@ -26,7 +26,7 @@ func newNetTCP(sr func(rw io.ReadWriter) error) (*netTCP, error) {
 
 	return &netTCP{
 		listener: tcpLn,
-		stream:   sr,
+		stream:   stream,
 	}, nil
 }
 

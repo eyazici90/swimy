@@ -3,6 +3,7 @@ package swim
 import "time"
 
 type Config struct {
+	Port              uint16
 	MaxSuspicionCount int
 
 	GossipInterval time.Duration // duration of gossiping with members

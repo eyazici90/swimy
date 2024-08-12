@@ -21,17 +21,17 @@ type Membership struct {
 }
 
 func New(cfg *Config) (*Membership, error) {
+	setDefaults(&cfg)
+
 	var ms Membership
-	nTCP, err := newNetTCP(ms.stream)
+	nTCP, err := newNetTCP(cfg.Port, ms.stream)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
-
 	ms.me = &Member{
 		addr:  nTCP.listener.Addr(),
 		state: alive,
 	}
-	setDefaults(&cfg)
 	ms.observer = observation{
 		onJoinCallback:  cfg.OnJoin,
 		onLeaveCallback: cfg.OnLeave,
