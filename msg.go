@@ -121,6 +121,13 @@ func (ms *Membership) stream(conn net.Conn) error {
 	case leaveReqMsgType:
 		ms.setState(left, addr)
 		ms.observer.onLeave(nil)
+	case errMsgType:
+		target := msg[16:]
+		tAddr, err := net.ResolveTCPAddr("tcp", string(target))
+		if err != nil {
+			return fmt.Errorf("resolve tcp addr: %w", err)
+		}
+		ms.setState(dead, tAddr)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
 	}

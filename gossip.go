@@ -3,6 +3,7 @@ package swim
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"time"
 )
@@ -12,9 +13,20 @@ func (ms *Membership) gossip(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
-	if err := ms.ping(ctx, target.addr); err != nil {
-		return fmt.Errorf("ping: %w", err)
+	if err := ms.ping(ctx, target.Addr()); err != nil {
+		// add suspect mechanism here to reduce false positives
+		// mark as suspect,
+		// forward it to someone else to send ping
+		// if still no, mark as dead & disseminate
+		// ms.setState(suspect, target.Addr())
+		ms.setState(dead, target.Addr())
+		out := errMsg{sender: ms.Me().Addr(), target: target.Addr()}
+		if berr := ms.broadCast(ctx, out.encode()); berr != nil {
+			log.Printf("Error: broadcasting dead member: %s from: %s", berr, ms.Me().Addr())
+		}
+		return nil
 	}
+	ms.observer.pinged()
 	ms.setAlives(target)
 	return nil
 }
