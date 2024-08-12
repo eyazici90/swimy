@@ -18,9 +18,9 @@ func setDefaults(ptr **Config) {
 			GossipRatio:       20,
 			GossipInterval:    time.Millisecond * 20,
 			IOTimeout:         time.Millisecond * 100,
-			OnJoin: func(m *Member) {
+			OnJoin: func(_ *Member) {
 			},
-			OnLeave: func(m *Member) {
+			OnLeave: func(_ *Member) {
 			},
 		}
 	}

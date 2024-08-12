@@ -8,7 +8,7 @@ import (
 )
 
 func (ms *Membership) gossip(ctx context.Context) error {
-	target, ok := ms.randomSelect()
+	target, ok := ms.rndTargetSelect()
 	if !ok {
 		return nil
 	}
@@ -19,11 +19,11 @@ func (ms *Membership) gossip(ctx context.Context) error {
 	return nil
 }
 
-func (ms *Membership) randomSelect() (*Member, bool) {
+func (ms *Membership) rndTargetSelect() (*Member, bool) {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 
-	if len(ms.others) <= 0 {
+	if len(ms.others) == 0 {
 		return nil, false
 	}
 

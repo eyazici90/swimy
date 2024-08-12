@@ -65,8 +65,6 @@ func (ms *Membership) setLeaveAddr(addrs ...net.Addr) {
 
 func (ms *Membership) becomeMembers(members ...*Member) {
 	ms.membersMu.Lock()
-	for _, m := range members {
-		ms.others = append(ms.others, m)
-	}
+	ms.others = append(ms.others, members...)
 	ms.membersMu.Unlock()
 }

@@ -24,12 +24,13 @@ func New(cfg *Config) (*Membership, error) {
 	setDefaults(&cfg)
 
 	var ms Membership
+	ms.cfg = cfg
 	nTCP, err := newNetTCP(cfg.Port, ms.stream)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
 	ms.me = &Member{
-		addr:  nTCP.listener.Addr(),
+		addr:  nTCP.tcpLn.Addr(),
 		state: alive,
 	}
 	ms.observer = observation{

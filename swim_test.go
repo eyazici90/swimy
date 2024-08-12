@@ -20,6 +20,7 @@ func TestSwim_Join(t *testing.T) {
 	ms2, err := swim.New(nil)
 	require.NoError(t, err)
 	defer ms2.Stop()
+
 	err = ms2.Join(ctx, ms1.Me().Addr().String())
 	require.NoError(t, err)
 
@@ -39,6 +40,7 @@ func TestSwim_Leave(t *testing.T) {
 	ms2, err := swim.New(nil)
 	require.NoError(t, err)
 	defer ms2.Stop()
+
 	err = ms2.Join(ctx, ms1.Me().Addr().String())
 	require.NoError(t, err)
 

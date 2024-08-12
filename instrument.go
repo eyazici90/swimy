@@ -32,7 +32,7 @@ func (o *observation) pinged() {
 	atomic.AddUint32(&o.metrics.SentNum, 1)
 }
 
-func (o *observation) received(msg string, addr string) {
+func (o *observation) received(msg, addr string) {
 	atomic.AddUint32(&o.metrics.ReceivedNum, 1)
 	log.Printf("received %s from: %s", msg, addr)
 }
