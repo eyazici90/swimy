@@ -3,27 +3,24 @@ package swim
 import (
 	"context"
 	"errors"
+	"net"
 	"sync"
 )
 
 func (ms *Membership) broadCast(ctx context.Context, msg []byte) error {
-	ms.membersMu.RLock()
-	others := ms.others
-	ms.membersMu.RUnlock()
-
-	n := len(others)
+	alives := ms.alives()
+	n := len(alives)
 	errCh := make(chan error, n)
 
 	var wg sync.WaitGroup
 	wg.Add(n)
-	for _, other := range others {
-		other := other
-		go func() {
+	for _, m := range alives {
+		go func(addr net.Addr) {
 			defer wg.Done()
-			if err := sendToTCP(ctx, other.Addr(), msg); err != nil {
+			if err := sendToTCP(ctx, addr, msg); err != nil {
 				errCh <- err
 			}
-		}()
+		}(m.Addr())
 	}
 	wg.Wait()
 	close(errCh)
