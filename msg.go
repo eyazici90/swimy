@@ -97,7 +97,7 @@ func (ms *Membership) stream(conn net.Conn) error {
 
 	const sizeOfMsg uint8 = 31
 	msg := make([]byte, sizeOfMsg)
-	if _, err := conn.Read(msg[:]); err != nil {
+	if _, err := conn.Read(msg); err != nil {
 		return fmt.Errorf("read from conn: %w", err)
 	}
 

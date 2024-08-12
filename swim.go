@@ -87,7 +87,7 @@ func (ms *Membership) Leave(ctx context.Context) error {
 
 func (ms *Membership) Stop() {
 	ms.stop()
-	log.Printf("stopped addr: %s", ms.me.Addr()) //move this to observer
+	log.Printf("stopped addr: %s", ms.me.Addr()) // move this to observer
 }
 
 func (ms *Membership) Me() *Member {
