@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"time"
 )
 
 func (ms *Membership) gossip(ctx context.Context) error {
@@ -35,4 +36,20 @@ func (ms *Membership) randomSelect() (*Member, bool) {
 
 	num := rand.Int() % len(toSend) // rnd choice
 	return toSend[num], true
+}
+
+func (ms *Membership) schedule(ctx context.Context, interval time.Duration, fn func(ctx context.Context) error) error {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-t.C:
+			if err := fn(ctx); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return fmt.Errorf("schedule :%w", ctx.Err())
+		}
+	}
 }

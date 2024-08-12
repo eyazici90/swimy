@@ -93,19 +93,3 @@ func (ms *Membership) Me() *Member {
 func (ms *Membership) Metrics() Metrics {
 	return ms.observer.metrics
 }
-
-func (ms *Membership) schedule(ctx context.Context, interval time.Duration, fn func(ctx context.Context) error) error {
-	t := time.NewTicker(interval)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-t.C:
-			if err := fn(ctx); err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return fmt.Errorf("schedule :%w", ctx.Err())
-		}
-	}
-}
