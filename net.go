@@ -3,7 +3,6 @@ package swim
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 )
@@ -11,10 +10,10 @@ import (
 type netTCP struct {
 	protocolVersion uint8
 	tcpLn           *net.TCPListener
-	stream          func(rw io.ReadWriter) error
+	stream          func(conn net.Conn) error
 }
 
-func newNetTCP(port uint16, stream func(rw io.ReadWriter) error) (*netTCP, error) {
+func newNetTCP(port uint16, stream func(conn net.Conn) error) (*netTCP, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
@@ -42,14 +41,14 @@ func (nt *netTCP) listen(ctx context.Context) error {
 		default:
 			conn, err := nt.tcpLn.AcceptTCP()
 			if err != nil {
-				return fmt.Errorf("accepting tcp: %w", err)
+				return fmt.Errorf("accept tcp: %w", err)
 			}
 			go handleConn(ctx, conn, nt.stream)
 		}
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, sr func(rw io.ReadWriter) error) {
+func handleConn(ctx context.Context, conn net.Conn, stream func(conn net.Conn) error) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -59,7 +58,7 @@ func handleConn(ctx context.Context, conn net.Conn, sr func(rw io.ReadWriter) er
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		err = sr(conn)
+		err = stream(conn)
 	}
 	if err != nil {
 		log.Printf("handle conn: %s", ctx.Err())

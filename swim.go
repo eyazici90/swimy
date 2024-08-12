@@ -60,8 +60,8 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 		if err != nil {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
-		if err = ms.joinReq(ctx, addr); err != nil {
-			return fmt.Errorf("send ping: %w", err)
+		if err = sendToTCP(ctx, addr, joinReq); err != nil {
+			return fmt.Errorf("send to: %w", err)
 		}
 
 		m := &Member{
@@ -76,9 +76,8 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 }
 
 func (ms *Membership) Leave(ctx context.Context) error {
-	out := leaveReq{from: ms.me.Addr()}
-	if err := ms.broadCast(ctx, out.encode()); err != nil {
-		return fmt.Errorf("broadcasting :%w", err)
+	if err := ms.broadCast(ctx, leaveReq); err != nil {
+		return fmt.Errorf("broadcast :%w", err)
 	}
 	ms.observer.onLeave(ms.Me())
 	return nil

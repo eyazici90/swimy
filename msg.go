@@ -1,10 +1,7 @@
 package swim
 
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"io"
 	"net"
 	"time"
 )
@@ -35,68 +32,29 @@ type (
 	}
 )
 
-func (j joinReq) encode() []byte {
-	var buf bytes.Buffer
-	buf.WriteByte(joinReqMsgType)
-	buf.WriteString(j.from.String())
-	return buf.Bytes()
-}
+var (
+	pingMsg  = []byte{pingMsgType}
+	joinReq  = []byte{joinReqMsgType}
+	leaveReq = []byte{leaveReqMsgType}
+)
 
-func (l leaveReq) encode() []byte {
-	var buf bytes.Buffer
-	buf.WriteByte(leaveReqMsgType)
-	buf.WriteString(l.from.String())
-	return buf.Bytes()
-}
-
-func (p pingMsg) encode() []byte {
-	var buf bytes.Buffer
-	buf.WriteByte(pingMsgType)
-	buf.WriteString(p.from.String())
-	return buf.Bytes()
-}
-
-func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
-	out := pingMsg{from: ms.me.Addr()}
-	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
-		return fmt.Errorf("send to: %w", err)
-	}
-	ms.observer.pinged()
-	return nil
-}
-
-func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
-	out := joinReq{from: ms.me.Addr()}
-	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
-		return fmt.Errorf("send to: %w", err)
-	}
-	return nil
-}
-
-func (ms *Membership) stream(rw io.ReadWriter) error {
-	var (
-		msgType byte
-		addr    net.Addr
-	)
+func (ms *Membership) stream(conn net.Conn) error {
+	addr := conn.RemoteAddr()
+	var msgType byte
 	defer func() {
 		ms.observer.received(allMsgTypes[msgType], addr.String())
 	}()
 
 	const sizeOfMsg uint8 = 16
-	msg := [sizeOfMsg]byte{}
-	if _, err := rw.Read(msg[:]); err != nil {
+	msg := make([]byte, sizeOfMsg)
+	if _, err := conn.Read(msg[:]); err != nil {
 		return fmt.Errorf("read from conn: %w", err)
 	}
 
 	msgType = msg[0]
-	addr, err := net.ResolveTCPAddr("tcp", string(msg[1:]))
-	if err != nil {
-		return fmt.Errorf("resolve tcp addr: %w", err)
-	}
-
 	switch msgType {
 	case pingMsgType:
-		ms.setAliveAddrs(addr)
+		ms.setState(alive, addr)
 	case joinReqMsgType:
 		m := &Member{
 			addr:  addr,
@@ -106,7 +64,7 @@ func (ms *Membership) stream(rw io.ReadWriter) error {
 		ms.becomeMembers(m)
 		ms.observer.onJoin(m)
 	case leaveReqMsgType:
-		ms.setLeaveAddr(addr)
+		ms.setState(left, addr)
 		ms.observer.onLeave(nil)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
