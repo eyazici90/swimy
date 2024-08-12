@@ -82,7 +82,7 @@ func (ms *Membership) stream(rw io.ReadWriter) error {
 		ms.observer.received(allMsgTypes[msgType], addr.String())
 	}()
 
-	const sizeOfMsg = 16
+	const sizeOfMsg uint8 = 16
 	msg := [sizeOfMsg]byte{}
 	if _, err := rw.Read(msg[:]); err != nil {
 		return fmt.Errorf("read from conn: %w", err)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -92,5 +93,9 @@ func (ms *Membership) Me() *Member {
 }
 
 func (ms *Membership) Metrics() Metrics {
-	return ms.observer.metrics
+	return Metrics{
+		ActiveMembers: atomic.LoadUint32(&ms.observer.metrics.ActiveMembers),
+		SentNum:       atomic.LoadUint32(&ms.observer.metrics.SentNum),
+		ReceivedNum:   atomic.LoadUint32(&ms.observer.metrics.ReceivedNum),
+	}
 }
