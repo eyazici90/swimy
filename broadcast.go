@@ -13,6 +13,7 @@ func (ms *Membership) broadCast(ctx context.Context, msg []byte) error {
 
 	n := len(others)
 	errCh := make(chan error, n)
+
 	var wg sync.WaitGroup
 	wg.Add(n)
 	for _, other := range others {

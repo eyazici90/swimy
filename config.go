@@ -3,15 +3,12 @@ package swim
 import "time"
 
 type Config struct {
-	Port              uint16
+	Port              uint16 // binding lister to
 	MaxSuspicionCount int
-
-	GossipInterval time.Duration // duration of gossiping with members
-	GossipRatio    uint8         // min. percentage of gossiping active members concurrently. ex: 20 => %20
-
-	IOTimeout time.Duration
-
-	OnJoin, OnLeave func(m *Member)
+	GossipInterval    time.Duration // duration of gossiping with members
+	GossipRatio       uint8         // min. percentage of gossiping active members concurrently. ex: 20 => %20
+	IOTimeout         time.Duration
+	OnJoin, OnLeave   func(m *Member)
 }
 
 func setDefaults(ptr **Config) {

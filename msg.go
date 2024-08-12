@@ -42,10 +42,10 @@ func (j joinReq) encode() []byte {
 	return buf.Bytes()
 }
 
-func (j leaveReq) encode() []byte {
+func (l leaveReq) encode() []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(leaveReqMsgType)
-	buf.WriteString(j.from.String())
+	buf.WriteString(l.from.String())
 	return buf.Bytes()
 }
 
@@ -79,10 +79,11 @@ func (ms *Membership) stream(rw io.ReadWriter) error {
 		addr    net.Addr
 	)
 	defer func() {
-		ms.observer.received(msgType, addr.String())
+		ms.observer.received(allMsgTypes[msgType], addr.String())
 	}()
 
-	msg := [16]byte{}
+	const sizeOfMsg = 16
+	msg := [sizeOfMsg]byte{}
 	if _, err := rw.Read(msg[:]); err != nil {
 		return fmt.Errorf("read from conn: %w", err)
 	}

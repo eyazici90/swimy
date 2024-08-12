@@ -10,7 +10,7 @@ import (
 
 type netTCP struct {
 	protocolVersion uint8
-	listener        *net.TCPListener
+	tcpLn           *net.TCPListener
 	stream          func(rw io.ReadWriter) error
 }
 
@@ -25,14 +25,14 @@ func newNetTCP(port uint16, stream func(rw io.ReadWriter) error) (*netTCP, error
 	}
 
 	return &netTCP{
-		listener: tcpLn,
-		stream:   stream,
+		tcpLn:  tcpLn,
+		stream: stream,
 	}, nil
 }
 
 func (nt *netTCP) listen(ctx context.Context) error {
 	defer func() {
-		_ = nt.listener.Close()
+		_ = nt.tcpLn.Close()
 	}()
 
 	for {
@@ -40,7 +40,7 @@ func (nt *netTCP) listen(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("listen tcp: %w", ctx.Err())
 		default:
-			conn, err := nt.listener.AcceptTCP()
+			conn, err := nt.tcpLn.AcceptTCP()
 			if err != nil {
 				return fmt.Errorf("accepting tcp: %w", err)
 			}
@@ -49,7 +49,7 @@ func (nt *netTCP) listen(ctx context.Context) error {
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, sr func(reader io.ReadWriter) error) {
+func handleConn(ctx context.Context, conn net.Conn, sr func(rw io.ReadWriter) error) {
 	defer func() {
 		_ = conn.Close()
 	}()
