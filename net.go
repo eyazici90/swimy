@@ -69,7 +69,7 @@ func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 	var nd net.Dialer
 	conn, err := nd.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
-		return fmt.Errorf("dial to addr: %w", err)
+		return fmt.Errorf("dial addr: %w", err)
 	}
 	defer func() { _ = conn.Close() }()
 

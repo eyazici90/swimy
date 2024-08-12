@@ -21,7 +21,7 @@ func (ms *Membership) gossip(ctx context.Context) error {
 		// ms.setState(suspect, target.Addr())
 		ms.setState(dead, target.Addr())
 		out := errMsg{sender: ms.Me().Addr(), target: target.Addr()}
-		if berr := ms.broadCast(ctx, out.encode()); berr != nil {
+		if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {
 			log.Printf("Error: broadcasting dead member: %s from: %s", berr, ms.Me().Addr())
 		}
 		return nil

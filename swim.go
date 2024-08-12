@@ -71,23 +71,23 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			since: time.Now().UTC(),
 		}
 		ms.becomeMembers(m)
-		ms.observer.onJoin(m)
+		// ms.observer.onJoin(m) => replace this with join-req
 	}
 	return nil
 }
 
 func (ms *Membership) Leave(ctx context.Context) error {
-	out := leaveReq{sender: ms.me.Addr()}
-	if err := ms.broadCast(ctx, out.encode()); err != nil {
+	req := leaveReq{sender: ms.me.Addr()}
+	if err := ms.broadCastToLives(ctx, req.encode()); err != nil {
 		return fmt.Errorf("broadcast :%w", err)
 	}
-	ms.observer.onLeave(ms.Me())
+	// ms.observer.onLeave(ms.Me()) replace this with leave-req
 	return nil
 }
 
 func (ms *Membership) Stop() {
 	ms.stop()
-	log.Printf("stopped addr: %s", ms.me.Addr()) // move this to observer
+	ms.observer.onStop()
 }
 
 func (ms *Membership) Me() *Member {

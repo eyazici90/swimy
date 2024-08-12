@@ -30,6 +30,10 @@ func (o *observation) onLeave(m *Member) {
 	log.Printf("me: %s, someone left addr", o.me)
 }
 
+func (o *observation) onStop() {
+	log.Printf("stopped addr: %s", o.me) // move this to observer
+}
+
 func (o *observation) pinged() {
 	atomic.AddUint32(&o.metrics.SentNum, 1)
 }

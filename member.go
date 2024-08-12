@@ -26,6 +26,18 @@ func (m *Member) Addr() net.Addr {
 	return m.addr
 }
 
+func (ms *Membership) isAware(addr net.Addr) bool {
+	ms.membersMu.RLock()
+	defer ms.membersMu.RUnlock()
+
+	for _, m := range ms.others {
+		if m.Addr() == addr {
+			return true
+		}
+	}
+	return false
+}
+
 func (ms *Membership) alives() []*Member {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()

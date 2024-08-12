@@ -1,6 +1,7 @@
 package swim
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -95,14 +96,20 @@ func (ms *Membership) stream(conn net.Conn) error {
 		ms.observer.received(allMsgTypes[msgType], addr.String())
 	}()
 
-	const sizeOfMsg uint8 = 31
-	msg := make([]byte, sizeOfMsg)
-	if _, err := conn.Read(msg); err != nil {
-		return fmt.Errorf("read from conn: %w", err)
+	bufConn := bufio.NewReader(conn)
+	msgType, err := bufConn.ReadByte()
+	if err != nil {
+		return fmt.Errorf("read msg-type: %w", err)
 	}
 
-	msgType = msg[0]
-	addr, err := net.ResolveTCPAddr("tcp", string(msg[1:16]))
+	const bufSize uint8 = 15
+	buff := make([]byte, bufSize)
+	n, err := bufConn.Read(buff)
+	if err != nil {
+		return fmt.Errorf("bufcon read: %w", err)
+	}
+
+	addr, err = net.ResolveTCPAddr("tcp", string(buff[:n]))
 	if err != nil {
 		return fmt.Errorf("resolve tcp addr: %w", err)
 	}
@@ -111,6 +118,10 @@ func (ms *Membership) stream(conn net.Conn) error {
 	case pingMsgType:
 		ms.setState(alive, addr)
 	case joinReqMsgType:
+		if ms.isAware(addr) {
+			return nil
+		}
+		// broadcast join req to all others
 		m := &Member{
 			addr:  addr,
 			state: alive,
@@ -122,8 +133,10 @@ func (ms *Membership) stream(conn net.Conn) error {
 		ms.setState(left, addr)
 		ms.observer.onLeave(nil)
 	case errMsgType:
-		target := msg[16:]
-		tAddr, err := net.ResolveTCPAddr("tcp", string(target))
+		if n, err = bufConn.Read(buff); err != nil {
+			return fmt.Errorf("bufcon read: %w", err)
+		}
+		tAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
 		if err != nil {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
