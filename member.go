@@ -26,6 +26,19 @@ func (m *Member) Addr() net.Addr {
 	return m.addr
 }
 
+func (ms *Membership) alives() []*Member {
+	ms.membersMu.RLock()
+	defer ms.membersMu.RUnlock()
+
+	var res []*Member
+	for _, m := range ms.others {
+		if m.state == alive {
+			res = append(res, m)
+		}
+	}
+	return res
+}
+
 func (ms *Membership) setAlives(members ...*Member) {
 	ms.membersMu.Lock()
 	defer ms.membersMu.Unlock()
