@@ -43,12 +43,12 @@ func (nt *netTCP) listen(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("accept tcp: %w", err)
 			}
-			go handleConn(ctx, conn, nt.stream)
+			go nt.handleConn(ctx, conn)
 		}
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, stream func(conn net.Conn) error) {
+func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -58,10 +58,10 @@ func handleConn(ctx context.Context, conn net.Conn, stream func(conn net.Conn) e
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		err = stream(conn)
+		err = nt.stream(conn)
 	}
 	if err != nil {
-		log.Printf("handle conn: %s", ctx.Err())
+		log.Printf("handle conn: %s", err)
 	}
 }
 
