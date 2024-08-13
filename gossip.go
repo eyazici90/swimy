@@ -10,14 +10,14 @@ import (
 )
 
 func (ms *Membership) gossip(ctx context.Context) error {
-	target, ok := ms.rndTargetSelect()
-	if !ok {
+	target, found := ms.rndTarget()
+	if !found {
 		return nil
 	}
 	if err := ms.ping(ctx, target.Addr()); err != nil {
 		// add suspect mechanism here to reduce false positives
 		// mark as suspect,
-		// forward it to someone else to send ping
+		// forward it to someone else to send indirect ping
 		// if still no, mark as dead & disseminate
 		// ms.setState(suspect, target.Addr())
 		ms.setState(dead, target.Addr())
@@ -32,7 +32,7 @@ func (ms *Membership) gossip(ctx context.Context) error {
 	return nil
 }
 
-func (ms *Membership) rndTargetSelect() (*Member, bool) {
+func (ms *Membership) rndTarget() (*Member, bool) {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 

@@ -151,12 +151,12 @@ func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 		if n, err = bufConn.Read(buff); err != nil {
 			return fmt.Errorf("bufcon read: %w", err)
 		}
-		errAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
+		deadAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
 		if err != nil {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
-		ms.setState(dead, errAddr)
-		ms.observer.onLeave(errAddr)
+		ms.setState(dead, deadAddr)
+		ms.observer.onLeave(deadAddr)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
 	}

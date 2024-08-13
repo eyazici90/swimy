@@ -80,7 +80,6 @@ func (ms *Membership) Leave(ctx context.Context) error {
 	if err := ms.broadCastToLives(ctx, req.encode()); err != nil {
 		return fmt.Errorf("broadcast :%w", err)
 	}
-	// ms.observer.onLeave(ms.Me()) replace this with leave-req
 	return nil
 }
 
@@ -90,7 +89,7 @@ func (ms *Membership) Stop() {
 }
 
 func (ms *Membership) Me() *Member {
-	return ms.me // we need net contract for this!!!
+	return ms.me.copy()
 }
 
 func (ms *Membership) Metrics() Metrics {

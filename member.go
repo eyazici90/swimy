@@ -34,6 +34,14 @@ func (m *Member) Addr() net.Addr {
 	return m.addr
 }
 
+func (m *Member) copy() *Member {
+	return &Member{
+		addr:  m.addr,
+		state: m.state,
+		since: m.since,
+	}
+}
+
 func (ms *Membership) alives(excludes ...net.Addr) []*Member {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
