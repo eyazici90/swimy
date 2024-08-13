@@ -14,20 +14,20 @@ type Metrics struct {
 type observation struct {
 	me              net.Addr
 	metrics         Metrics
-	onJoinCallback  func(m *Member)
-	onLeaveCallback func(m *Member)
+	onJoinCallback  func(m net.Addr)
+	onLeaveCallback func(m net.Addr)
 }
 
-func (o *observation) onJoin(m *Member) {
-	o.onJoinCallback(m)
+func (o *observation) onJoin(addr net.Addr) {
+	o.onJoinCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, 1)
-	log.Printf("me: %s, someone joined addr: %s", o.me, m.addr)
+	log.Printf("me: %s, someone joined addr: %s", o.me, addr)
 }
 
-func (o *observation) onLeave(m *Member) {
-	o.onLeaveCallback(m)
+func (o *observation) onLeave(addr net.Addr) {
+	o.onLeaveCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, ^uint32(0))
-	log.Printf("me: %s, someone left addr", o.me)
+	log.Printf("me: %s, someone left addr: %s", o.me, addr)
 }
 
 func (o *observation) onStop() {

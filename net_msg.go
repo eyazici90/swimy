@@ -128,10 +128,10 @@ func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 			since: time.Now().UTC(),
 		}
 		ms.becomeMembers(m)
-		ms.observer.onJoin(m)
+		ms.observer.onJoin(addr)
 	case leaveReqMsgType:
 		ms.setState(left, addr)
-		ms.observer.onLeave(nil)
+		ms.observer.onLeave(addr)
 	case errMsgType:
 		if n, err = bufConn.Read(buff); err != nil {
 			return fmt.Errorf("bufcon read: %w", err)
