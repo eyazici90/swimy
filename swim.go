@@ -12,7 +12,7 @@ import (
 
 type Membership struct {
 	cfg      *Config
-	observer observation
+	observer defaultObserver
 
 	membersMu sync.RWMutex
 	me        *Member
@@ -34,7 +34,7 @@ func New(cfg *Config) (*Membership, error) {
 		addr:  nTCP.tcpLn.Addr(),
 		state: alive,
 	}
-	ms.observer = observation{
+	ms.observer = defaultObserver{
 		me:              ms.me.Addr(),
 		onJoinCallback:  cfg.OnJoin,
 		onLeaveCallback: cfg.OnLeave,
