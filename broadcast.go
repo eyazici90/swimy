@@ -3,17 +3,18 @@ package swim
 import (
 	"context"
 	"errors"
+	"net"
 	"sync"
 )
 
-func (ms *Membership) broadCastToLives(ctx context.Context, msg []byte) error {
-	alives := ms.alives()
-	n := len(alives)
+func (ms *Membership) broadCastToLives(ctx context.Context, msg []byte, excludes ...net.Addr) error {
+	lives := ms.alives(excludes...)
+	n := len(lives)
 	errCh := make(chan error, n)
 
 	var wg sync.WaitGroup
 	wg.Add(n)
-	for _, m := range alives {
+	for _, m := range lives {
 		m := m
 		go func() {
 			defer wg.Done()

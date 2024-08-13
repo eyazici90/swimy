@@ -10,17 +10,19 @@ import (
 )
 
 var allMsgTypes = [...]string{
-	unknownMsgType:  "unknown",
-	pingMsgType:     "ping",
-	joinReqMsgType:  "join-req",
-	leaveReqMsgType: "leave-req",
-	errMsgType:      "error",
+	unknownMsgType:          "unknown",
+	pingMsgType:             "ping",
+	joinReqMsgType:          "join-req",
+	joinReqBroadcastMsgType: "join-req-broadcast",
+	leaveReqMsgType:         "leave-req",
+	errMsgType:              "error",
 }
 
 const (
 	unknownMsgType = iota
 	pingMsgType
 	joinReqMsgType
+	joinReqBroadcastMsgType
 	leaveReqMsgType
 	errMsgType
 )
@@ -28,6 +30,9 @@ const (
 type (
 	joinReq struct {
 		sender net.Addr
+	}
+	joinReqBroadcast struct {
+		target net.Addr
 	}
 	leaveReq struct {
 		sender net.Addr
@@ -45,6 +50,13 @@ func (j joinReq) encode() []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(joinReqMsgType)
 	buf.WriteString(j.sender.String())
+	return buf.Bytes()
+}
+
+func (j joinReqBroadcast) encode() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(joinReqBroadcastMsgType)
+	buf.WriteString(j.target.String())
 	return buf.Bytes()
 }
 
@@ -118,15 +130,18 @@ func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 	case pingMsgType:
 		ms.setState(alive, addr)
 	case joinReqMsgType:
-		if ms.isAware(addr) {
-			return nil
+		m := newAliveMember(addr)
+		ms.becomeMembers(m)
+		ms.observer.onJoin(addr)
+		msg := joinReqBroadcast{target: addr}
+		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*50)
+		defer cancel()
+
+		if err = ms.broadCastToLives(ctx, msg.encode(), addr); err != nil {
+			return fmt.Errorf("broadcast join-req:%w", err)
 		}
-		// broadcast join req to all others
-		m := &Member{
-			addr:  addr,
-			state: alive,
-			since: time.Now().UTC(),
-		}
+	case joinReqBroadcastMsgType:
+		m := newAliveMember(addr)
 		ms.becomeMembers(m)
 		ms.observer.onJoin(addr)
 	case leaveReqMsgType:
@@ -136,11 +151,12 @@ func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 		if n, err = bufConn.Read(buff); err != nil {
 			return fmt.Errorf("bufcon read: %w", err)
 		}
-		tAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
+		errAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
 		if err != nil {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
-		ms.setState(dead, tAddr)
+		ms.setState(dead, errAddr)
+		ms.observer.onLeave(errAddr)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
 	}

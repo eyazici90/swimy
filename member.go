@@ -22,28 +22,27 @@ type Member struct {
 	since time.Time
 }
 
+func newAliveMember(addr net.Addr) *Member {
+	return &Member{
+		addr:  addr,
+		state: alive,
+		since: time.Now().UTC(),
+	}
+}
+
 func (m *Member) Addr() net.Addr {
 	return m.addr
 }
 
-func (ms *Membership) isAware(addr net.Addr) bool {
-	ms.membersMu.RLock()
-	defer ms.membersMu.RUnlock()
-
-	for _, m := range ms.others {
-		if m.Addr() == addr {
-			return true
-		}
-	}
-	return false
-}
-
-func (ms *Membership) alives() []*Member {
+func (ms *Membership) alives(excludes ...net.Addr) []*Member {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 
 	var res []*Member
 	for _, m := range ms.others {
+		if slices.Contains(excludes, m.Addr()) {
+			continue
+		}
 		if m.state == alive {
 			res = append(res, m)
 		}
