@@ -10,10 +10,10 @@ import (
 type netTCP struct {
 	protocolVersion uint8
 	tcpLn           *net.TCPListener
-	stream          func(conn net.Conn) error
+	stream          func(context.Context, net.Conn) error
 }
 
-func newNetTCP(port uint16, stream func(conn net.Conn) error) (*netTCP, error) {
+func newNetTCP(port uint16, stream func(context.Context, net.Conn) error) (*netTCP, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
@@ -58,7 +58,7 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		err = nt.stream(conn)
+		err = nt.stream(ctx, conn)
 	}
 	if err != nil {
 		log.Printf("handle conn: %s", err)

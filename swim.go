@@ -71,7 +71,6 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			since: time.Now().UTC(),
 		}
 		ms.becomeMembers(m)
-		// ms.observer.onJoin(m) => replace this with join-req
 	}
 	return nil
 }
@@ -91,7 +90,7 @@ func (ms *Membership) Stop() {
 }
 
 func (ms *Membership) Me() *Member {
-	return ms.me
+	return ms.me // we need net contract for this!!!
 }
 
 func (ms *Membership) Metrics() Metrics {

@@ -87,7 +87,7 @@ func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
 	return nil
 }
 
-func (ms *Membership) stream(conn net.Conn) error {
+func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 	var (
 		addr    net.Addr
 		msgType byte
