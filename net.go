@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 type netTCP struct {
@@ -58,6 +59,9 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
+		if err = conn.SetDeadline(until100ms()); err != nil {
+			break
+		}
 		err = nt.stream(ctx, conn)
 	}
 	if err != nil {
@@ -73,6 +77,9 @@ func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 	}
 	defer func() { _ = conn.Close() }()
 
+	if err = conn.SetWriteDeadline(until100ms()); err != nil {
+		return fmt.Errorf("set write deadline: %w", err)
+	}
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("send msg: %w", ctx.Err())
@@ -82,4 +89,8 @@ func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 		}
 	}
 	return nil
+}
+
+func until100ms() time.Time {
+	return time.Now().Add(time.Millisecond * 100) // make it configurable later
 }
