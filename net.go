@@ -9,9 +9,8 @@ import (
 )
 
 type netTCP struct {
-	protocolVersion uint8
-	tcpLn           *net.TCPListener
-	stream          func(context.Context, net.Conn) error
+	tcpLn  *net.TCPListener
+	stream func(context.Context, net.Conn) error
 }
 
 func newNetTCP(port uint16, stream func(context.Context, net.Conn) error) (*netTCP, error) {

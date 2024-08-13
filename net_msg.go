@@ -134,7 +134,7 @@ func (ms *Membership) stream(ctx context.Context, conn net.Conn) error {
 		ms.becomeMembers(m)
 		ms.observer.onJoin(addr)
 		msg := joinReqBroadcast{target: addr}
-		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*50)
+		ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
 		defer cancel()
 
 		if err = ms.broadCastToLives(ctx, msg.encode(), addr); err != nil {

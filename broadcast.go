@@ -28,9 +28,7 @@ func (ms *Membership) broadCastToLives(ctx context.Context, msg []byte, excludes
 
 	var errs []error
 	for err := range errCh {
-		if err != nil {
-			errs = append(errs, err)
-		}
+		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
