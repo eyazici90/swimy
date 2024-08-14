@@ -28,3 +28,10 @@ Simple, unambitious implementation of SWIM: Scalable Weakly-consistent Infection
     err := ms2.Join(ctx, "127.0.0.1:54555") // existing known members to join the membership
 
 ```
+
+## TODOs
+- Add suspect mechanism to prevent false positives
+- Implement lamport clock
+- Instrument via otel & slog
+- TCP conn. pooling per addr
+- Add failure testing 
