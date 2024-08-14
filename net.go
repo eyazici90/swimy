@@ -3,17 +3,23 @@ package swim
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
 )
 
+const (
+	networkTCP            = "tcp"
+	defaultTCPConnTimeout = time.Millisecond * 100
+)
+
 type netTCP struct {
 	tcpLn  *net.TCPListener
-	stream func(context.Context, net.Conn) error
+	stream func(context.Context, io.ReadWriter) error
 }
 
-func newNetTCP(port uint16, stream func(context.Context, net.Conn) error) (*netTCP, error) {
+func newNetTCP(port uint16, stream func(context.Context, io.ReadWriter) error) (*netTCP, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
@@ -63,7 +69,7 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		if err = conn.SetReadDeadline(until100ms()); err != nil {
+		if err = conn.SetDeadline(until100ms()); err != nil {
 			break
 		}
 		err = nt.stream(ctx, conn)
