@@ -114,7 +114,7 @@ func sendReceiveTCP(ctx context.Context, addr net.Addr, out, in []byte) error {
 	}
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("send rreceive msg: %w", ctx.Err())
+		return fmt.Errorf("send receive msg: %w", ctx.Err())
 	default:
 		if _, err = conn.Write(out); err != nil {
 			return fmt.Errorf("write to conn: %w", err)

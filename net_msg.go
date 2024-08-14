@@ -142,7 +142,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	switch msgType {
 	case pingMsgType:
 		ms.setState(alive, addr)
-		if err = ms.ack(conn); err != nil {
+		if err := ms.ack(conn); err != nil {
 			return err
 		}
 	case joinReqMsgType:

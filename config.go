@@ -21,8 +21,8 @@ func DefaultConfig() *Config {
 type Config struct {
 	Port              uint16 // binding lister to
 	MaxSuspicionCount int
-	GossipInterval    time.Duration // duration of gossiping with members
-	GossipRatio       uint8         // min. percentage of gossiping active members concurrently. ex: 20 => %20
+	GossipInterval    time.Duration // duration of gossiping with members, default: 20ms
+	GossipRatio       uint8         // min. percentage of gossiping active members concurrently. default: 20 (%20)
 	IOTimeout         time.Duration
 	OnJoin, OnLeave   func(addr net.Addr)
 }

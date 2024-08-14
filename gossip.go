@@ -74,7 +74,7 @@ func (ms *Membership) rndTargets() (map[*Member]struct{}, bool) {
 	}
 
 	const percentage = 100
-	total := uint32(math.Ceil(float64(ms.cfg.GossipRatio) / float64(percentage)))
+	total := uint32(math.Ceil(float64(ms.cfg.GossipRatio) * float64(len(possibles)) / float64(percentage)))
 	targets := make(map[*Member]struct{}, total)
 	for total > 0 {
 		num := rand.Int() % len(possibles) // rnd choice
