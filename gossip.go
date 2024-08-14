@@ -63,15 +63,14 @@ func (ms *Membership) rndTargets() (map[*Member]struct{}, bool) {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 
-	if len(ms.others) == 0 {
-		return nil, false
-	}
-
 	var possibles []*Member
 	for _, m := range ms.others {
 		if m.state == alive || m.state == suspect {
 			possibles = append(possibles, m)
 		}
+	}
+	if len(possibles) == 0 {
+		return nil, false
 	}
 
 	const percentage = 100

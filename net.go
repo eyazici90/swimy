@@ -50,6 +50,11 @@ func (nt *netTCP) listen(ctx context.Context) error {
 
 func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() {
+		if rvr := recover(); rvr != nil {
+			log.Printf("recover from: %s", rvr)
+		}
+	}()
+	defer func() {
 		_ = conn.Close()
 	}()
 
@@ -58,7 +63,7 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	case <-ctx.Done():
 		err = ctx.Err()
 	default:
-		if err = conn.SetDeadline(until100ms()); err != nil {
+		if err = conn.SetReadDeadline(until100ms()); err != nil {
 			break
 		}
 		err = nt.stream(ctx, conn)
@@ -69,10 +74,10 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 }
 
 func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
-	var nd net.Dialer
+	nd := &net.Dialer{Timeout: defaultTCPConnTimeout}
 	conn, err := nd.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
-		return fmt.Errorf("dial addr: %w", err)
+		return fmt.Errorf("connect: %w", err)
 	}
 	defer func() { _ = conn.Close() }()
 
@@ -90,6 +95,8 @@ func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 	return nil
 }
 
+const defaultTCPConnTimeout = time.Millisecond * 100
+
 func until100ms() time.Time {
-	return time.Now().Add(time.Millisecond * 100) // make it configurable later
+	return time.Now().Add(defaultTCPConnTimeout) // make it configurable later
 }
