@@ -11,6 +11,7 @@ import (
 
 var allMsgTypes = [...]string{
 	unknownMsgType:          "unknown",
+	ackRespMsgType:          "ack-resp",
 	pingMsgType:             "ping",
 	joinReqMsgType:          "join-req",
 	joinReqBroadcastMsgType: "join-req-broadcast",
@@ -19,7 +20,8 @@ var allMsgTypes = [...]string{
 }
 
 const (
-	unknownMsgType = iota
+	unknownMsgType byte = iota
+	ackRespMsgType
 	pingMsgType
 	joinReqMsgType
 	joinReqBroadcastMsgType
@@ -83,17 +85,28 @@ func (e errMsg) encode() []byte {
 }
 
 func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
-	out := pingMsg{sender: ms.me.Addr()}
-	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
-		return fmt.Errorf("send to: %w", err)
+	msg := pingMsg{sender: ms.me.Addr()}
+	resp := make([]byte, 1)
+	if err := sendReceiveTCP(ctx, addr, msg.encode(), resp); err != nil {
+		return fmt.Errorf("send & wait ack: %w", err)
+	}
+	if resp[0] != ackRespMsgType {
+		return fmt.Errorf("received byte is not ack")
 	}
 	ms.observer.pinged()
 	return nil
 }
 
+func (ms *Membership) ack(w io.Writer) error {
+	if _, err := w.Write([]byte{ackRespMsgType}); err != nil {
+		return fmt.Errorf("write ack-resp: %w", err)
+	}
+	return nil
+}
+
 func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
 	out := joinReq{sender: ms.me.Addr()}
-	if err := sendToTCP(ctx, addr, out.encode()); err != nil {
+	if err := sendTCP(ctx, addr, out.encode()); err != nil {
 		return fmt.Errorf("send to: %w", err)
 	}
 	return nil
@@ -129,6 +142,9 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	switch msgType {
 	case pingMsgType:
 		ms.setState(alive, addr)
+		if err = ms.ack(conn); err != nil {
+			return err
+		}
 	case joinReqMsgType:
 		m := newAliveMember(addr)
 		ms.becomeMembers(m)

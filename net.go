@@ -79,9 +79,9 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	}
 }
 
-func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
+func sendTCP(ctx context.Context, addr net.Addr, out []byte) error {
 	nd := &net.Dialer{Timeout: defaultTCPConnTimeout}
-	conn, err := nd.DialContext(ctx, "tcp", addr.String())
+	conn, err := nd.DialContext(ctx, networkTCP, addr.String())
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
@@ -94,14 +94,37 @@ func sendToTCP(ctx context.Context, addr net.Addr, msg []byte) error {
 	case <-ctx.Done():
 		return fmt.Errorf("send msg: %w", ctx.Err())
 	default:
-		if _, err = conn.Write(msg); err != nil {
+		if _, err = conn.Write(out); err != nil {
 			return fmt.Errorf("write to conn: %w", err)
 		}
 	}
 	return nil
 }
 
-const defaultTCPConnTimeout = time.Millisecond * 100
+func sendReceiveTCP(ctx context.Context, addr net.Addr, out, in []byte) error {
+	nd := &net.Dialer{Timeout: defaultTCPConnTimeout}
+	conn, err := nd.DialContext(ctx, networkTCP, addr.String())
+	if err != nil {
+		return fmt.Errorf("connect: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	if err = conn.SetDeadline(until100ms()); err != nil {
+		return fmt.Errorf("set deadline: %w", err)
+	}
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("send rreceive msg: %w", ctx.Err())
+	default:
+		if _, err = conn.Write(out); err != nil {
+			return fmt.Errorf("write to conn: %w", err)
+		}
+		if _, err = conn.Read(in); err != nil {
+			return fmt.Errorf("read conn: %w", err)
+		}
+	}
+	return nil
+}
 
 func until100ms() time.Time {
 	return time.Now().Add(defaultTCPConnTimeout) // make it configurable later

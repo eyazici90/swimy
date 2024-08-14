@@ -18,7 +18,7 @@ func (ms *Membership) broadCastToLives(ctx context.Context, msg []byte, excludes
 		m := m
 		go func() {
 			defer wg.Done()
-			if err := sendToTCP(ctx, m.Addr(), msg); err != nil {
+			if err := sendTCP(ctx, m.Addr(), msg); err != nil {
 				errCh <- err
 			}
 		}()
