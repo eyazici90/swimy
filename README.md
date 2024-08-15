@@ -29,6 +29,13 @@ Simple, unambitious implementation of [SWIM: Scalable Weakly-consistent Infectio
 
 ```
 
+## Decisions
+- Failure is immediately disseminated by multicast
+  - using gossip style dissemination could have reduced msgs going around, yet reducing convergence speed. 
+- Gossip uses randomness rather than round-robin
+  - round-robin may be added for probing to reduce time to detect failure 
+
+
 ## TODOs
 - Add suspect mechanism to prevent false positives
 - Implement lamport clock

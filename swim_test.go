@@ -31,7 +31,7 @@ func TestSwim_Join(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return ms1.Metrics().ReceivedNum > uint32(0) && ms2.Metrics().SentNum > uint32(0)
+		return joinNum.Load() == 1
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
