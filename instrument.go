@@ -1,8 +1,12 @@
 package swim
 
 import (
+	"context"
+	"io"
 	"log"
+	"log/slog"
 	"net"
+	"os"
 	"sync/atomic"
 )
 
@@ -34,6 +38,13 @@ func (o *defaultObserver) onStop() {
 	log.Printf("stopped addr: %s", o.me) // move this to observer
 }
 
+func (o *defaultObserver) onSilentErr(ctx context.Context, err error) {
+	slog.Log(ctx,
+		slog.LevelError,
+		err.Error(),
+	)
+}
+
 func (o *defaultObserver) pinged() {
 	atomic.AddUint32(&o.metrics.SentNum, 1)
 }
@@ -41,4 +52,23 @@ func (o *defaultObserver) pinged() {
 func (o *defaultObserver) received(msg, addr string) {
 	atomic.AddUint32(&o.metrics.ReceivedNum, 1)
 	log.Printf("me: %s, received %s from: %s", o.me, msg, addr)
+}
+
+func (ms *Membership) useDefaultObserver() {
+	ms.observer = &defaultObserver{
+		me:              ms.me.Addr(),
+		onJoinCallback:  ms.cfg.OnJoin,
+		onLeaveCallback: ms.cfg.OnLeave,
+	}
+	setUpSlog(os.Stdout)
+}
+
+func setUpSlog(wr io.Writer) {
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}
+	h := slog.NewTextHandler(wr, opts)
+	sl := slog.New(h)
+
+	slog.SetDefault(sl)
 }

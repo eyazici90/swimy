@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 )
@@ -20,11 +20,11 @@ type netTCP struct {
 }
 
 func newNetTCP(port uint16, stream func(context.Context, io.ReadWriter) error) (*netTCP, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
+	addr, err := net.ResolveTCPAddr(networkTCP, fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
 	}
-	tcpLn, err := net.ListenTCP("tcp", addr)
+	tcpLn, err := net.ListenTCP(networkTCP, addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen tcp: %w", err)
 	}
@@ -57,7 +57,7 @@ func (nt *netTCP) listen(ctx context.Context) error {
 func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
-			log.Printf("recover from: %s", rvr)
+			slog.Log(ctx, slog.LevelError, fmt.Sprintf("recover from :%v", rvr))
 		}
 	}()
 	defer func() {
@@ -75,7 +75,7 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 		err = nt.stream(ctx, conn)
 	}
 	if err != nil {
-		log.Printf("handle conn: %s", err)
+		slog.Log(ctx, slog.LevelError, fmt.Sprintf("handle conn :%v", err))
 	}
 }
 

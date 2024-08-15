@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/rand/v2"
 	"sync"
@@ -38,7 +37,7 @@ func (ms *Membership) gossip(ctx context.Context) error {
 				ms.setState(dead, target.Addr())
 				out := errMsg{sender: ms.Me().Addr(), target: target.Addr()}
 				if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {
-					log.Printf("Error: broadcasting dead member: %s me: %s", errors.Join(err, berr), ms.Me().Addr())
+					ms.observer.onSilentErr(ctx, errors.Join(err, berr))
 				}
 				return
 			}

@@ -3,7 +3,7 @@ package swim
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -12,7 +12,7 @@ import (
 
 type Membership struct {
 	cfg      *Config
-	observer defaultObserver
+	observer *defaultObserver
 
 	membersMu sync.RWMutex
 	me        *Member
@@ -34,22 +34,18 @@ func New(cfg *Config) (*Membership, error) {
 		addr:  nTCP.tcpLn.Addr(),
 		state: alive,
 	}
-	ms.observer = defaultObserver{
-		me:              ms.me.Addr(),
-		onJoinCallback:  cfg.OnJoin,
-		onLeaveCallback: cfg.OnLeave,
-	}
+	ms.useDefaultObserver()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ms.stop = cancel
 	go func() {
 		if err := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); err != nil {
-			log.Print(err)
+			slog.Log(ctx, slog.LevelError, err.Error())
 		}
 	}()
 	go func() {
 		if err := nTCP.listen(ctx); err != nil {
-			log.Print(err)
+			slog.Log(ctx, slog.LevelError, err.Error())
 		}
 	}()
 	return &ms, nil
@@ -78,7 +74,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 func (ms *Membership) Leave(ctx context.Context) error {
 	req := leaveReq{sender: ms.me.Addr()}
 	if err := ms.broadCastToLives(ctx, req.encode()); err != nil {
-		return fmt.Errorf("broadcast :%w", err)
+		return fmt.Errorf("broadcast leave-req :%w", err)
 	}
 	return nil
 }
