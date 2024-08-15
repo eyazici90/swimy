@@ -84,7 +84,7 @@ func (e errMsg) encode() []byte {
 	return buf.Bytes()
 }
 
-func (ms *Membership) ping(ctx context.Context, addr net.Addr) error {
+func (ms *Membership) pingACK(ctx context.Context, addr net.Addr) error {
 	msg := pingMsg{sender: ms.me.Addr()}
 	resp := make([]byte, 1)
 	if err := sendReceiveTCP(ctx, addr, msg.encode(), resp); err != nil {
@@ -114,11 +114,11 @@ func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
 
 func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	var (
-		addr    net.Addr
+		sender  net.Addr
 		msgType byte
 	)
 	defer func() {
-		ms.observer.received(allMsgTypes[msgType], addr.String())
+		ms.observer.received(ctx, allMsgTypes[msgType], sender.String())
 	}()
 
 	bufConn := bufio.NewReader(conn)
@@ -134,32 +134,32 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		return fmt.Errorf("bufcon read: %w", err)
 	}
 
-	addr, err = net.ResolveTCPAddr("tcp", string(buff[:n]))
+	sender, err = net.ResolveTCPAddr("tcp", string(buff[:n]))
 	if err != nil {
 		return fmt.Errorf("resolve tcp addr: %w", err)
 	}
 
 	switch msgType {
 	case pingMsgType:
-		ms.setState(alive, addr)
+		ms.setState(alive, sender)
 		if err := ms.ack(conn); err != nil {
 			return err
 		}
 	case joinReqMsgType:
-		m := newAliveMember(addr)
+		m := newAliveMember(sender)
 		ms.becomeMembers(m)
-		ms.observer.onJoin(addr)
-		msg := joinReqBroadcast{target: addr}
-		if err = ms.broadCastToLives(ctx, msg.encode(), addr); err != nil {
+		ms.observer.onJoin(ctx, sender)
+		msg := joinReqBroadcast{target: sender}
+		if err = ms.broadCastToLives(ctx, msg.encode(), sender); err != nil {
 			return fmt.Errorf("broadcast join-req:%w", err)
 		}
 	case joinReqBroadcastMsgType:
-		m := newAliveMember(addr)
+		m := newAliveMember(sender)
 		ms.becomeMembers(m)
-		ms.observer.onJoin(addr)
+		ms.observer.onJoin(ctx, sender)
 	case leaveReqMsgType:
-		ms.setState(left, addr)
-		ms.observer.onLeave(addr)
+		ms.setState(left, sender)
+		ms.observer.onLeave(ctx, sender)
 	case errMsgType:
 		if n, err = bufConn.Read(buff); err != nil {
 			return fmt.Errorf("bufcon read: %w", err)
@@ -169,7 +169,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 			return fmt.Errorf("resolve tcp addr: %w", err)
 		}
 		ms.setState(dead, deadAddr)
-		ms.observer.onLeave(deadAddr)
+		ms.observer.onLeave(ctx, deadAddr)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
 	}

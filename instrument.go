@@ -3,7 +3,6 @@ package swim
 import (
 	"context"
 	"io"
-	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -22,36 +21,42 @@ type defaultObserver struct {
 	onLeaveCallback func(m net.Addr)
 }
 
-func (o *defaultObserver) onJoin(addr net.Addr) {
+func (o *defaultObserver) onJoin(ctx context.Context, addr net.Addr) {
 	o.onJoinCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, 1)
-	log.Printf("me: %s, someone joined addr: %s", o.me, addr)
+	attr := slog.String("me", o.me.String())
+	slog.LogAttrs(ctx, slog.LevelInfo, "someone joined", attr)
 }
 
-func (o *defaultObserver) onLeave(addr net.Addr) {
+func (o *defaultObserver) onLeave(ctx context.Context, addr net.Addr) {
 	o.onLeaveCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, ^uint32(0))
-	log.Printf("me: %s, someone left addr: %s", o.me, addr)
+	attr := slog.String("me", o.me.String())
+	slog.LogAttrs(ctx, slog.LevelInfo, "someone left", attr)
 }
 
 func (o *defaultObserver) onStop() {
-	log.Printf("stopped addr: %s", o.me) // move this to observer
+	attr := slog.String("me", o.me.String())
+	slog.LogAttrs(nil, slog.LevelInfo, "stopped addr", attr)
 }
 
 func (o *defaultObserver) onSilentErr(ctx context.Context, err error) {
-	slog.Log(ctx,
-		slog.LevelError,
-		err.Error(),
-	)
+	attr := slog.String("me", o.me.String())
+	slog.LogAttrs(ctx, slog.LevelError, err.Error(), attr)
 }
 
 func (o *defaultObserver) pinged() {
 	atomic.AddUint32(&o.metrics.SentNum, 1)
 }
 
-func (o *defaultObserver) received(msg, addr string) {
+func (o *defaultObserver) received(ctx context.Context, msg, senderAddr string) {
 	atomic.AddUint32(&o.metrics.ReceivedNum, 1)
-	log.Printf("me: %s, received %s from: %s", o.me, msg, addr)
+	attrs := []slog.Attr{
+		slog.String("me", o.me.String()),
+		slog.String("msg-type", msg),
+		slog.String("sender", senderAddr),
+	}
+	slog.LogAttrs(ctx, slog.LevelInfo, "received", attrs...)
 }
 
 func (ms *Membership) useDefaultObserver() {
@@ -69,6 +74,5 @@ func setUpSlog(wr io.Writer) {
 	}
 	h := slog.NewTextHandler(wr, opts)
 	sl := slog.New(h)
-
 	slog.SetDefault(sl)
 }

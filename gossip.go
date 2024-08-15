@@ -24,24 +24,14 @@ func (ms *Membership) gossip(ctx context.Context) error {
 		target := target
 		go func() {
 			defer wg.Done()
-			if err := ms.ping(ctx, target.Addr()); err != nil {
+			if err := ms.pingACK(ctx, target.Addr()); err != nil {
 				if errors.Is(err, context.Canceled) {
 					errCh <- err
 					return
 				}
-				// add suspect mechanism here to reduce false positives
-				// mark as suspect,
-				// forward it to someone else to send indirect ping
-				// if still no, mark as dead & disseminate
-				// ms.setState(suspect, target.Addr())
-				ms.setState(dead, target.Addr())
-				out := errMsg{sender: ms.Me().Addr(), target: target.Addr()}
-				if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {
-					ms.observer.onSilentErr(ctx, errors.Join(err, berr))
-				}
+				ms.failureDetected(ctx, target, err)
 				return
 			}
-			ms.observer.pinged()
 			ms.setAlives(target)
 		}()
 	}
@@ -56,6 +46,19 @@ func (ms *Membership) gossip(ctx context.Context) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (ms *Membership) failureDetected(ctx context.Context, failed *Member, err error) {
+	// add suspect mechanism here to reduce false positives
+	// mark as suspect,
+	// forward it to someone else to send indirect ping
+	// if still no, mark as dead & disseminate
+	// ms.setState(suspect, target.Addr())
+	ms.setState(dead, failed.Addr())
+	out := errMsg{sender: ms.Me().Addr(), target: failed.Addr()}
+	if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {
+		ms.observer.onSilentErr(ctx, errors.Join(err, berr))
+	}
 }
 
 func (ms *Membership) rndTargets() (map[*Member]struct{}, bool) {

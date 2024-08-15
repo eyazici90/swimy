@@ -57,7 +57,8 @@ func (nt *netTCP) listen(ctx context.Context) error {
 func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
-			slog.Log(ctx, slog.LevelError, fmt.Sprintf("recover from :%v", rvr))
+			attr := slog.String("error", fmt.Sprintf("%v", rvr))
+			slog.Log(ctx, slog.LevelError, "recover", attr)
 		}
 	}()
 	defer func() {

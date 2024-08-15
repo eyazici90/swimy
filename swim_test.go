@@ -2,6 +2,8 @@ package swim_test
 
 import (
 	"context"
+	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,7 +14,12 @@ import (
 func TestSwim_Join(t *testing.T) {
 	ctx := context.Background()
 
-	ms1, err := swim.New(nil)
+	var joinNum atomic.Uint32
+	cfg := swim.DefaultConfig()
+	cfg.OnJoin = func(addr net.Addr) {
+		joinNum.Add(1)
+	}
+	ms1, err := swim.New(cfg)
 	require.NoError(t, err)
 	defer ms1.Stop()
 
@@ -31,7 +38,12 @@ func TestSwim_Join(t *testing.T) {
 func TestSwim_Leave(t *testing.T) {
 	ctx := context.Background()
 
-	ms1, err := swim.New(nil)
+	var leftNum atomic.Uint32
+	cfg := swim.DefaultConfig()
+	cfg.OnLeave = func(addr net.Addr) {
+		leftNum.Add(1)
+	}
+	ms1, err := swim.New(cfg)
 	require.NoError(t, err)
 	defer ms1.Stop()
 
@@ -46,7 +58,7 @@ func TestSwim_Leave(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return ms1.Metrics().ActiveMembers == 0 && ms2.Metrics().ActiveMembers == 0
+		return leftNum.Load() == 1
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
