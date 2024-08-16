@@ -119,7 +119,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		msgType byte
 	)
 	defer func() {
-		ms.observer.received(ctx, allMsgTypes[msgType], sender.String())
+		ms.observer.received(ctx, allMsgTypes[msgType], sender)
 	}()
 
 	bufConn := bufio.NewReader(conn)
@@ -130,17 +130,10 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 
 	const bufSize uint8 = 15
 	buff := make([]byte, bufSize)
-	n, err := bufConn.Read(buff)
+	sender, err = parseSender(bufConn, buff)
 	if err != nil {
-		return fmt.Errorf("bufcon read: %w", err)
+		return fmt.Errorf("parse sender: %w", err)
 	}
-	b := buff[:n]
-	str := *(*string)(unsafe.Pointer(&b))
-	sender, err = net.ResolveTCPAddr("tcp", str)
-	if err != nil {
-		return fmt.Errorf("resolve tcp addr: %w", err)
-	}
-
 	switch msgType {
 	case pingMsgType:
 		ms.setState(alive, sender)
@@ -163,14 +156,9 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.setState(left, sender)
 		ms.observer.onLeave(ctx, sender)
 	case errMsgType:
-		if n, err = bufConn.Read(buff); err != nil {
-			return fmt.Errorf("bufcon read: %w", err)
-		}
-		b := buff[:n]
-		str := *(*string)(unsafe.Pointer(&b))
-		deadAddr, err := net.ResolveTCPAddr("tcp", str)
+		deadAddr, err := parseDeadAddr(bufConn, buff)
 		if err != nil {
-			return fmt.Errorf("resolve dead tcp addr: %w", err)
+			return fmt.Errorf("parse dead addr: %w", err)
 		}
 		ms.setState(dead, deadAddr)
 		ms.observer.onLeave(ctx, deadAddr)
@@ -178,4 +166,34 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		return fmt.Errorf("unknown msg type: %d", msgType)
 	}
 	return nil
+}
+
+func parseSender(r io.Reader, buff []byte) (net.Addr, error) {
+	n, err := r.Read(buff)
+	if err != nil {
+		return nil, fmt.Errorf("bufcon read: %w", err)
+	}
+	b := buff[:n]
+	str := *(*string)(unsafe.Pointer(&b))
+
+	sender, err := net.ResolveTCPAddr("tcp", str)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tcp addr: %w", err)
+	}
+	return sender, nil
+}
+
+func parseDeadAddr(r io.Reader, buff []byte) (net.Addr, error) {
+	n, err := r.Read(buff)
+	if err != nil {
+		return nil, fmt.Errorf("bufcon read: %w", err)
+	}
+	b := buff[:n]
+	str := *(*string)(unsafe.Pointer(&b))
+
+	addr, err := net.ResolveTCPAddr("tcp", str)
+	if err != nil {
+		return nil, fmt.Errorf("resolve dead tcp addr: %w", err)
+	}
+	return addr, nil
 }

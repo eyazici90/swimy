@@ -24,15 +24,21 @@ type defaultObserver struct {
 func (o *defaultObserver) onJoin(ctx context.Context, addr net.Addr) {
 	o.onJoinCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, 1)
-	attr := slog.String("me", o.me.String())
-	slog.LogAttrs(ctx, slog.LevelInfo, "someone joined", attr)
+	attrs := []slog.Attr{
+		slog.String("me", o.me.String()),
+		slog.String("sender", addr.String()),
+	}
+	slog.LogAttrs(ctx, slog.LevelInfo, "someone joined", attrs...)
 }
 
 func (o *defaultObserver) onLeave(ctx context.Context, addr net.Addr) {
 	o.onLeaveCallback(addr)
 	atomic.AddUint32(&o.metrics.ActiveMembers, ^uint32(0))
-	attr := slog.String("me", o.me.String())
-	slog.LogAttrs(ctx, slog.LevelInfo, "someone left", attr)
+	attrs := []slog.Attr{
+		slog.String("me", o.me.String()),
+		slog.String("sender", addr.String()),
+	}
+	slog.LogAttrs(ctx, slog.LevelInfo, "someone left", attrs...)
 }
 
 func (o *defaultObserver) onStop() {
@@ -49,12 +55,12 @@ func (o *defaultObserver) pinged() {
 	atomic.AddUint32(&o.metrics.SentNum, 1)
 }
 
-func (o *defaultObserver) received(ctx context.Context, msg, senderAddr string) {
+func (o *defaultObserver) received(ctx context.Context, msg string, sender net.Addr) {
 	atomic.AddUint32(&o.metrics.ReceivedNum, 1)
 	attrs := []slog.Attr{
 		slog.String("me", o.me.String()),
 		slog.String("msg-type", msg),
-		slog.String("sender", senderAddr),
+		slog.String("sender", sender.String()),
 	}
 	slog.LogAttrs(ctx, slog.LevelInfo, "received", attrs...)
 }
