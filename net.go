@@ -76,7 +76,7 @@ func (nt *netTCP) handleConn(ctx context.Context, conn net.Conn) {
 		err = nt.stream(ctx, conn)
 	}
 	if err != nil {
-		slog.Log(ctx, slog.LevelError, fmt.Sprintf("handle conn :%v", err))
+		slog.Log(ctx, slog.LevelError, fmt.Sprintf("handle conn: %v", err))
 	}
 }
 

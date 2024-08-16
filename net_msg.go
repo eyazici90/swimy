@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"unsafe"
 )
 
 var allMsgTypes = [...]string{
@@ -133,8 +134,9 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	if err != nil {
 		return fmt.Errorf("bufcon read: %w", err)
 	}
-
-	sender, err = net.ResolveTCPAddr("tcp", string(buff[:n]))
+	b := buff[:n]
+	str := *(*string)(unsafe.Pointer(&b))
+	sender, err = net.ResolveTCPAddr("tcp", str)
 	if err != nil {
 		return fmt.Errorf("resolve tcp addr: %w", err)
 	}
@@ -164,9 +166,11 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		if n, err = bufConn.Read(buff); err != nil {
 			return fmt.Errorf("bufcon read: %w", err)
 		}
-		deadAddr, err := net.ResolveTCPAddr("tcp", string(buff[:n]))
+		b := buff[:n]
+		str := *(*string)(unsafe.Pointer(&b))
+		deadAddr, err := net.ResolveTCPAddr("tcp", str)
 		if err != nil {
-			return fmt.Errorf("resolve tcp addr: %w", err)
+			return fmt.Errorf("resolve dead tcp addr: %w", err)
 		}
 		ms.setState(dead, deadAddr)
 		ms.observer.onLeave(ctx, deadAddr)
