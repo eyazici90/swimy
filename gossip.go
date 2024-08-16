@@ -48,7 +48,7 @@ func (ms *Membership) gossip(ctx context.Context) error {
 	return nil
 }
 
-func (ms *Membership) failureDetected(ctx context.Context, failed *Member, err error) {
+func (ms *Membership) failureDetected(ctx context.Context, failed Member, err error) {
 	// add suspect mechanism here to reduce false positives
 	// mark as suspect,
 	// forward it to someone else to send indirect ping
@@ -61,11 +61,11 @@ func (ms *Membership) failureDetected(ctx context.Context, failed *Member, err e
 	}
 }
 
-func (ms *Membership) rndTargets() (map[*Member]struct{}, bool) {
+func (ms *Membership) rndTargets() (map[Member]struct{}, bool) {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 
-	var possibles []*Member
+	var possibles []Member
 	for _, m := range ms.others {
 		if m.state == alive || m.state == suspect {
 			possibles = append(possibles, m)
@@ -77,7 +77,7 @@ func (ms *Membership) rndTargets() (map[*Member]struct{}, bool) {
 
 	const percentage = 100
 	total := uint32(math.Ceil(float64(ms.cfg.GossipRatio) * float64(len(possibles)) / float64(percentage)))
-	targets := make(map[*Member]struct{}, total)
+	targets := make(map[Member]struct{}, total)
 	for total > 0 {
 		num := rand.Int() % len(possibles) // rnd choice
 		selected := possibles[num]

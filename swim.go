@@ -15,8 +15,8 @@ type Membership struct {
 	observer *defaultObserver
 
 	membersMu sync.RWMutex
-	me        *Member
-	others    []*Member
+	me        Member
+	others    map[net.Addr]Member
 
 	stop func()
 }
@@ -24,13 +24,16 @@ type Membership struct {
 func New(cfg *Config) (*Membership, error) {
 	setDefaults(&cfg)
 
-	var ms Membership
-	ms.cfg = cfg
+	ms := Membership{
+		cfg:    cfg,
+		others: make(map[net.Addr]Member),
+	}
+
 	nTCP, err := newNetTCP(cfg.Port, ms.stream)
 	if err != nil {
 		return nil, fmt.Errorf("initializing tcp listener: %w", err)
 	}
-	ms.me = &Member{
+	ms.me = Member{
 		addr:  nTCP.tcpLn.Addr(),
 		state: alive,
 	}
@@ -61,7 +64,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 			return fmt.Errorf("join req: %w", err)
 		}
 
-		m := &Member{
+		m := Member{
 			addr:  addr,
 			state: alive,
 			since: time.Now().UTC(),
@@ -84,8 +87,8 @@ func (ms *Membership) Stop() {
 	ms.observer.onStop()
 }
 
-func (ms *Membership) Me() *Member {
-	return ms.me.copy()
+func (ms *Membership) Me() Member {
+	return ms.me
 }
 
 func (ms *Membership) Metrics() Metrics {

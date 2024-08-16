@@ -22,31 +22,23 @@ type Member struct {
 	since time.Time
 }
 
-func newAliveMember(addr net.Addr) *Member {
-	return &Member{
+func newAliveMember(addr net.Addr) Member {
+	return Member{
 		addr:  addr,
 		state: alive,
 		since: time.Now().UTC(),
 	}
 }
 
-func (m *Member) Addr() net.Addr {
+func (m Member) Addr() net.Addr {
 	return m.addr
 }
 
-func (m *Member) copy() *Member {
-	return &Member{
-		addr:  m.addr,
-		state: m.state,
-		since: m.since,
-	}
-}
-
-func (ms *Membership) alives(excludes ...net.Addr) []*Member {
+func (ms *Membership) alives(excludes ...net.Addr) []Member {
 	ms.membersMu.RLock()
 	defer ms.membersMu.RUnlock()
 
-	var res []*Member
+	var res []Member
 	for _, m := range ms.others {
 		if slices.Contains(excludes, m.Addr()) {
 			continue
@@ -58,7 +50,7 @@ func (ms *Membership) alives(excludes ...net.Addr) []*Member {
 	return res
 }
 
-func (ms *Membership) setAlives(members ...*Member) {
+func (ms *Membership) setAlives(members ...Member) {
 	ms.membersMu.Lock()
 	defer ms.membersMu.Unlock()
 
@@ -74,16 +66,19 @@ func (ms *Membership) setState(state memberState, addrs ...net.Addr) {
 	defer ms.membersMu.Unlock()
 
 	now := time.Now().UTC()
-	for _, m := range ms.others {
-		if slices.Contains(addrs, m.Addr()) {
+	for _, addr := range addrs {
+		if m, ok := ms.others[addr]; ok {
 			m.state = state
 			m.since = now
+			ms.others[addr] = m
 		}
 	}
 }
 
-func (ms *Membership) becomeMembers(members ...*Member) {
+func (ms *Membership) becomeMembers(members ...Member) {
 	ms.membersMu.Lock()
-	ms.others = append(ms.others, members...)
+	for _, m := range members {
+		ms.others[m.Addr()] = m
+	}
 	ms.membersMu.Unlock()
 }
