@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eyazici90/swim"
+	"github.com/eyazici90/swimpls"
 	"github.com/stretchr/testify/require"
 )
 
