@@ -1,4 +1,4 @@
-package swim_test
+package swimy_test
 
 import (
 	"context"
@@ -7,23 +7,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eyazici90/swimpls"
+	"github.com/eyazici90/swimy"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSwim_Join(t *testing.T) {
+func TestSwimy_Join(t *testing.T) {
 	ctx := context.Background()
 
 	var joinNum atomic.Uint32
-	cfg := swim.DefaultConfig()
+	cfg := swimy.DefaultConfig()
 	cfg.OnJoin = func(addr net.Addr) {
 		joinNum.Add(1)
 	}
-	ms1, err := swim.New(cfg)
+	ms1, err := swimy.New(cfg)
 	require.NoError(t, err)
 	defer ms1.Stop()
 
-	ms2, err := swim.New(nil)
+	ms2, err := swimy.New(nil)
 	require.NoError(t, err)
 	defer ms2.Stop()
 
@@ -35,19 +35,19 @@ func TestSwim_Join(t *testing.T) {
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
-func TestSwim_Leave(t *testing.T) {
+func TestSwimy_Leave(t *testing.T) {
 	ctx := context.Background()
 
 	var leftNum atomic.Uint32
-	cfg := swim.DefaultConfig()
+	cfg := swimy.DefaultConfig()
 	cfg.OnLeave = func(addr net.Addr) {
 		leftNum.Add(1)
 	}
-	ms1, err := swim.New(cfg)
+	ms1, err := swimy.New(cfg)
 	require.NoError(t, err)
 	defer ms1.Stop()
 
-	ms2, err := swim.New(nil)
+	ms2, err := swimy.New(nil)
 	require.NoError(t, err)
 	defer ms2.Stop()
 
@@ -62,21 +62,21 @@ func TestSwim_Leave(t *testing.T) {
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
-func TestSwim_Dead(t *testing.T) {
+func TestSwimy_Dead(t *testing.T) {
 	ctx := context.Background()
 
-	ms1, err := swim.New(nil)
+	ms1, err := swimy.New(nil)
 	require.NoError(t, err)
 	defer ms1.Stop()
 
-	ms2, err := swim.New(nil)
+	ms2, err := swimy.New(nil)
 	require.NoError(t, err)
 
 	err = ms2.Join(ctx, ms1.Me().Addr().String())
 	require.NoError(t, err)
 	defer ms2.Stop()
 
-	ms3, err := swim.New(nil)
+	ms3, err := swimy.New(nil)
 	require.NoError(t, err)
 	err = ms3.Join(ctx, ms1.Me().Addr().String())
 	require.NoError(t, err)

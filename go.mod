@@ -1,4 +1,4 @@
-module github.com/eyazici90/swimpls
+module github.com/eyazici90/swimy
 
 go 1.22.2
 

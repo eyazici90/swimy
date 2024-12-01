@@ -1,5 +1,5 @@
-# swimpls
-Simple, unambitious implementation of [SWIM: Scalable Weakly-consistent Infection-style Process Group Membership Protocol](https://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/SWIM.pdf)
+# swimy
+Simple, unambitious implementation of [swimy: Scalable Weakly-consistent Infection-style Process Group Membership Protocol](https://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/swimy.pdf)
 `plus` some improvements.
 
 
@@ -8,21 +8,21 @@ Simple, unambitious implementation of [SWIM: Scalable Weakly-consistent Infectio
 
 ```go
 
-    cfg := swim.DefaultConfig()
+    cfg := swimy.DefaultConfig()
     cfg.OnJoin = func(addr net.Addr) {
     // do something with the notification
     }
     cfg.OnLeave = func(addr net.Addr) {
     // do something with the notification
     }
-    ms1, err := swim.New(cfg)
+    ms1, err := swimy.New(cfg)
     if err != nil {
     //
     }
     defer ms1.Stop()
     
     // some other app
-    ms2, err := swim.New(nil) 
+    ms2, err := swimy.New(nil) 
     if err != nil {
     //
     }

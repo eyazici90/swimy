@@ -1,4 +1,4 @@
-package swim
+package swimy
 
 import (
 	"bufio"
