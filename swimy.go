@@ -35,7 +35,7 @@ func New(cfg *Config) (*Membership, error) {
 	}
 	ms.me = Member{
 		addr:  nTCP.tcpLn.Addr(),
-		state: alive,
+		state: statusAlive,
 	}
 	ms.useDefaultObserver()
 
@@ -66,7 +66,7 @@ func (ms *Membership) Join(ctx context.Context, existing ...string) error {
 
 		m := Member{
 			addr:  addr,
-			state: alive,
+			state: statusAlive,
 			since: time.Now().UTC(),
 		}
 		ms.becomeMembers(m)

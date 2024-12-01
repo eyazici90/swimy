@@ -49,12 +49,12 @@ func (ms *Membership) gossip(ctx context.Context) error {
 }
 
 func (ms *Membership) failureDetected(ctx context.Context, failed Member, err error) {
-	// add suspect mechanism here to reduce false positives
-	// mark as suspect,
+	// add suspection mechanism here to reduce false positives
+	// mark as statusSuspect,
 	// forward it to someone else to send indirect ping
-	// if still no, mark as dead & disseminate
-	// ms.setState(suspect, target.Addr())
-	ms.setState(dead, failed.Addr())
+	// if still no, mark as statusDead & disseminate
+	// ms.setState(statusSuspect, target.Addr())
+	ms.setState(statusDead, failed.Addr())
 	out := errMsg{sender: ms.Me().Addr(), target: failed.Addr()}
 	if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {
 		ms.observer.onSilentErr(ctx, errors.Join(err, berr))
@@ -67,7 +67,7 @@ func (ms *Membership) rndTargets() (map[Member]struct{}, bool) {
 
 	var possibles []Member
 	for _, m := range ms.others {
-		if m.state == alive || m.state == suspect {
+		if m.state == statusAlive || m.state == statusSuspect {
 			possibles = append(possibles, m)
 		}
 	}

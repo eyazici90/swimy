@@ -9,11 +9,11 @@ import (
 type memberState int
 
 const (
-	unknown memberState = iota
-	alive
-	dead
-	suspect
-	left
+	statusUnknown memberState = iota
+	statusAlive
+	statusDead
+	statusSuspect
+	statusLeft
 )
 
 type Member struct {
@@ -25,7 +25,7 @@ type Member struct {
 func newAliveMember(addr net.Addr) Member {
 	return Member{
 		addr:  addr,
-		state: alive,
+		state: statusAlive,
 		since: time.Now().UTC(),
 	}
 }
@@ -43,7 +43,7 @@ func (ms *Membership) alives(excludes ...net.Addr) []Member {
 		if slices.Contains(excludes, m.Addr()) {
 			continue
 		}
-		if m.state == alive {
+		if m.state == statusAlive {
 			res = append(res, m)
 		}
 	}
@@ -56,7 +56,7 @@ func (ms *Membership) setAlives(members ...Member) {
 
 	now := time.Now().UTC()
 	for _, m := range members {
-		m.state = alive
+		m.state = statusAlive
 		m.since = now
 	}
 }

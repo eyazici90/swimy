@@ -136,7 +136,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	}
 	switch msgType {
 	case pingMsgType:
-		ms.setState(alive, sender)
+		ms.setState(statusAlive, sender)
 		if err := ms.ack(conn); err != nil {
 			return err
 		}
@@ -153,14 +153,14 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.becomeMembers(m)
 		ms.observer.onJoin(ctx, sender)
 	case leaveReqMsgType:
-		ms.setState(left, sender)
+		ms.setState(statusLeft, sender)
 		ms.observer.onLeave(ctx, sender)
 	case errMsgType:
 		deadAddr, err := parseDeadAddr(bufConn, buff)
 		if err != nil {
 			return fmt.Errorf("parse dead addr: %w", err)
 		}
-		ms.setState(dead, deadAddr)
+		ms.setState(statusDead, deadAddr)
 		ms.observer.onLeave(ctx, deadAddr)
 	default:
 		return fmt.Errorf("unknown msg type: %d", msgType)
