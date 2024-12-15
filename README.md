@@ -39,7 +39,6 @@ Simple, unambitious implementation of [swimy: Scalable Weakly-consistent Infecti
 
 
 ## TODOs
-- Add suspect mechanism to prevent false positives
 - Implement lamport clock
 - Instrument via otel & slog
 - TCP conn. pooling per addr

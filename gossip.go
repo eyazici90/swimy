@@ -49,11 +49,10 @@ func (ms *Membership) gossip(ctx context.Context) error {
 }
 
 func (ms *Membership) failureDetected(ctx context.Context, failed Member, err error) {
-	// add suspection mechanism here to reduce false positives
-	// mark as statusSuspect,
-	// forward it to someone else to send indirect ping
-	// if still no, mark as statusDead & disseminate
-	// ms.setState(statusSuspect, target.Addr())
+	if ok := ms.suspect(ctx, failed); ok {
+		ms.setState(statusAlive, failed.Addr())
+		return
+	}
 	ms.setState(statusDead, failed.Addr())
 	out := errMsg{sender: ms.Me().Addr(), target: failed.Addr()}
 	if berr := ms.broadCastToLives(ctx, out.encode()); berr != nil {

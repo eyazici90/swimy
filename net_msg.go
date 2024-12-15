@@ -13,20 +13,24 @@ import (
 var allMsgTypes = [...]string{
 	unknownMsgType:          "unknown",
 	ackRespMsgType:          "ack-resp",
-	pingMsgType:             "ping",
+	nackRespMsgType:         "nack-resp",
+	pingReqType:             "ping",
 	joinReqMsgType:          "join-req",
 	joinReqBroadcastMsgType: "join-req-broadcast",
 	leaveReqMsgType:         "leave-req",
+	indirectPingMsgType:     "indirect-ping-req",
 	errMsgType:              "error",
 }
 
 const (
 	unknownMsgType byte = iota
 	ackRespMsgType
-	pingMsgType
+	nackRespMsgType
+	pingReqType
 	joinReqMsgType
 	joinReqBroadcastMsgType
 	leaveReqMsgType
+	indirectPingMsgType
 	errMsgType
 )
 
@@ -40,8 +44,12 @@ type (
 	leaveReq struct {
 		sender net.Addr
 	}
-	pingMsg struct {
+	pingReq struct {
 		sender net.Addr
+	}
+	indirectPingReq struct {
+		sender  net.Addr
+		suspect net.Addr
 	}
 	errMsg struct {
 		sender net.Addr
@@ -70,9 +78,9 @@ func (l leaveReq) encode() []byte {
 	return buf.Bytes()
 }
 
-func (p pingMsg) encode() []byte {
+func (p pingReq) encode() []byte {
 	var buf bytes.Buffer
-	buf.WriteByte(pingMsgType)
+	buf.WriteByte(pingReqType)
 	buf.WriteString(p.sender.String())
 	return buf.Bytes()
 }
@@ -85,10 +93,18 @@ func (e errMsg) encode() []byte {
 	return buf.Bytes()
 }
 
+func (e indirectPingReq) encode() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(indirectPingMsgType)
+	buf.WriteString(e.sender.String())
+	buf.WriteString(e.suspect.String())
+	return buf.Bytes()
+}
+
 func (ms *Membership) pingACK(ctx context.Context, addr net.Addr) error {
-	msg := pingMsg{sender: ms.me.Addr()}
+	req := pingReq{sender: ms.me.Addr()}
 	resp := make([]byte, 1)
-	if err := sendReceiveTCP(ctx, addr, msg.encode(), resp); err != nil {
+	if err := sendReceiveTCP(ctx, addr, req.encode(), resp); err != nil {
 		return fmt.Errorf("send & wait ack: %w", err)
 	}
 	if resp[0] != ackRespMsgType {
@@ -105,9 +121,16 @@ func (ms *Membership) ack(w io.Writer) error {
 	return nil
 }
 
+func (ms *Membership) nack(w io.Writer) error {
+	if _, err := w.Write([]byte{nackRespMsgType}); err != nil {
+		return fmt.Errorf("write nack-resp: %w", err)
+	}
+	return nil
+}
+
 func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
-	out := joinReq{sender: ms.me.Addr()}
-	if err := sendTCP(ctx, addr, out.encode()); err != nil {
+	req := joinReq{sender: ms.me.Addr()}
+	if err := sendTCP(ctx, addr, req.encode()); err != nil {
 		return fmt.Errorf("send to: %w", err)
 	}
 	return nil
@@ -130,16 +153,26 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 
 	const bufSize uint8 = 15
 	buff := make([]byte, bufSize)
-	sender, err = parseSender(bufConn, buff)
+	sender, err = readAddr(bufConn, buff)
 	if err != nil {
 		return fmt.Errorf("parse sender: %w", err)
 	}
 	switch msgType {
-	case pingMsgType:
+	case pingReqType:
 		ms.setState(statusAlive, sender)
-		if err := ms.ack(conn); err != nil {
-			return err
+		return ms.ack(conn)
+	case indirectPingMsgType:
+		addr, err := readAddr(bufConn, buff)
+		if err != nil {
+			return fmt.Errorf("parse dead addr: %w", err)
 		}
+		ms.setState(statusSuspect, addr)
+		if err := ms.pingACK(ctx, addr); err != nil {
+			ms.setState(statusDead, addr)
+			return ms.nack(conn)
+		}
+		ms.setState(statusAlive, addr)
+		return ms.ack(conn)
 	case joinReqMsgType:
 		m := newAliveMember(sender)
 		ms.becomeMembers(m)
@@ -156,7 +189,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.setState(statusLeft, sender)
 		ms.observer.onLeave(ctx, sender)
 	case errMsgType:
-		deadAddr, err := parseDeadAddr(bufConn, buff)
+		deadAddr, err := readAddr(bufConn, buff)
 		if err != nil {
 			return fmt.Errorf("parse dead addr: %w", err)
 		}
@@ -168,22 +201,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	return nil
 }
 
-func parseSender(r io.Reader, buff []byte) (net.Addr, error) {
-	n, err := r.Read(buff)
-	if err != nil {
-		return nil, fmt.Errorf("bufcon read: %w", err)
-	}
-	b := buff[:n]
-	str := *(*string)(unsafe.Pointer(&b))
-
-	sender, err := net.ResolveTCPAddr("tcp", str)
-	if err != nil {
-		return nil, fmt.Errorf("resolve tcp addr: %w", err)
-	}
-	return sender, nil
-}
-
-func parseDeadAddr(r io.Reader, buff []byte) (net.Addr, error) {
+func readAddr(r io.Reader, buff []byte) (net.Addr, error) {
 	n, err := r.Read(buff)
 	if err != nil {
 		return nil, fmt.Errorf("bufcon read: %w", err)
