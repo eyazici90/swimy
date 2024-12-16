@@ -43,12 +43,12 @@ func New(cfg *Config) (*Membership, error) {
 	ms.stop = cancel
 	go func() {
 		if err := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); err != nil {
-			slog.Log(ctx, slog.LevelError, err.Error())
+			slog.ErrorContext(ctx, err.Error())
 		}
 	}()
 	go func() {
 		if err := nTCP.listen(ctx); err != nil {
-			slog.Log(ctx, slog.LevelError, err.Error())
+			slog.ErrorContext(ctx, err.Error())
 		}
 	}()
 	return &ms, nil
@@ -85,6 +85,12 @@ func (ms *Membership) Leave(ctx context.Context) error {
 func (ms *Membership) Stop() {
 	ms.stop()
 	ms.observer.onStop()
+}
+
+func (ms *Membership) Members() []Member {
+	lives := ms.alives()
+	lives = append(lives, ms.me)
+	return lives
 }
 
 func (ms *Membership) Me() Member {

@@ -8,16 +8,17 @@ import (
 	"time"
 
 	"github.com/eyazici90/swimy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSwimy_Join(t *testing.T) {
 	ctx := context.Background()
 
-	var joinNum atomic.Uint32
+	var joined atomic.Bool
 	cfg := swimy.DefaultConfig()
 	cfg.OnJoin = func(addr net.Addr) {
-		joinNum.Add(1)
+		joined.Store(true)
 	}
 	ms1, err := swimy.New(cfg)
 	require.NoError(t, err)
@@ -31,17 +32,17 @@ func TestSwimy_Join(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return joinNum.Load() == 1
+		return joined.Load() && len(ms1.Members()) > 1
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
 func TestSwimy_Leave(t *testing.T) {
 	ctx := context.Background()
 
-	var leftNum atomic.Uint32
+	var left atomic.Bool
 	cfg := swimy.DefaultConfig()
 	cfg.OnLeave = func(addr net.Addr) {
-		leftNum.Add(1)
+		left.Store(true)
 	}
 	ms1, err := swimy.New(cfg)
 	require.NoError(t, err)
@@ -58,7 +59,7 @@ func TestSwimy_Leave(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return leftNum.Load() == 1
+		return left.Load()
 	}, time.Millisecond*150, time.Millisecond*20)
 }
 
@@ -81,7 +82,9 @@ func TestSwimy_Dead(t *testing.T) {
 	err = ms3.Join(ctx, ms1.Me().Addr().String())
 	require.NoError(t, err)
 	<-time.After(time.Millisecond * 20)
+	assert.GreaterOrEqual(t, len(ms1.Members()), 3)
+	<-time.After(time.Millisecond * 20)
 	ms3.Stop()
-
 	<-time.After(time.Millisecond * 150)
+	assert.LessOrEqual(t, len(ms1.Members()), 2)
 }
