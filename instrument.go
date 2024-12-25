@@ -5,7 +5,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
 	"sync/atomic"
 )
 
@@ -63,15 +62,6 @@ func (o *defaultObserver) received(ctx context.Context, msg string, sender net.A
 		slog.String("sender", sender.String()),
 	}
 	slog.LogAttrs(ctx, slog.LevelInfo, "received", attrs...)
-}
-
-func (ms *Membership) useDefaultObserver() {
-	ms.observer = &defaultObserver{
-		me:              ms.me.Addr(),
-		onJoinCallback:  ms.cfg.OnJoin,
-		onLeaveCallback: ms.cfg.OnLeave,
-	}
-	setUpSlog(os.Stdout)
 }
 
 func setUpSlog(wr io.Writer) {

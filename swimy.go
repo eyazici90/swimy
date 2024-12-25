@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -23,7 +24,7 @@ type Membership struct {
 
 func New(cfg *Config) (*Membership, error) {
 	setDefaults(&cfg)
-
+	setUpSlog(os.Stdout)
 	ms := Membership{
 		cfg:    cfg,
 		others: make(map[net.Addr]Member),
@@ -31,13 +32,18 @@ func New(cfg *Config) (*Membership, error) {
 
 	nTCP, err := newNetTCP(cfg.Port, ms.stream)
 	if err != nil {
-		return nil, fmt.Errorf("initializing tcp listener: %w", err)
+		return nil, fmt.Errorf("new tcp listener: %w", err)
 	}
-	ms.me = Member{
+	me := Member{
 		addr:  nTCP.tcpLn.Addr(),
 		state: statusAlive,
 	}
-	ms.useDefaultObserver()
+	ms.me = me
+	ms.observer = &defaultObserver{
+		me:              me.Addr(),
+		onJoinCallback:  ms.cfg.OnJoin,
+		onLeaveCallback: ms.cfg.OnLeave,
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ms.stop = cancel
