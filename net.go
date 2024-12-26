@@ -15,7 +15,7 @@ const (
 )
 
 type netTCP struct {
-	tcpLn  *net.TCPListener
+	ln     *net.TCPListener
 	stream func(context.Context, io.ReadWriter) error
 }
 
@@ -24,23 +24,21 @@ func newNetTCP(port uint16, stream func(context.Context, io.ReadWriter) error) (
 	if err != nil {
 		return nil, fmt.Errorf("resolve tcp addr: %w", err)
 	}
-	tcpLn, err := net.ListenTCP(networkTCP, addr)
+	ln, err := net.ListenTCP(networkTCP, addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen tcp: %w", err)
 	}
 
 	return &netTCP{
-		tcpLn:  tcpLn,
+		ln:     ln,
 		stream: stream,
 	}, nil
 }
 
 func (nt *netTCP) listen(ctx context.Context) error {
 	quit := make(chan struct{})
-	defer func() {
-		quit <- struct{}{}
-		close(quit)
-	}()
+	defer close(quit)
+
 	go func() {
 		// This is to unblock tcpLn.AcceptTCP().
 		// Given acceptTCP is a blocking call, must be closed to let it returns err.
@@ -49,7 +47,7 @@ func (nt *netTCP) listen(ctx context.Context) error {
 		case <-quit:
 		case <-ctx.Done():
 		}
-		_ = nt.tcpLn.Close()
+		_ = nt.ln.Close()
 	}()
 
 	for {
@@ -57,7 +55,7 @@ func (nt *netTCP) listen(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("listen tcp: %w", ctx.Err())
 		default:
-			conn, err := nt.tcpLn.AcceptTCP()
+			conn, err := nt.ln.AcceptTCP()
 			if err != nil {
 				return fmt.Errorf("accept tcp: %w", err)
 			}

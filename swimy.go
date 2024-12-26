@@ -35,7 +35,7 @@ func New(cfg *Config) (*Membership, error) {
 		return nil, fmt.Errorf("new tcp listener: %w", err)
 	}
 	me := Member{
-		addr:  nTCP.tcpLn.Addr(),
+		addr:  nTCP.ln.Addr(),
 		state: statusAlive,
 	}
 	ms.me = me
