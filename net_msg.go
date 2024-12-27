@@ -138,15 +138,15 @@ func (ms *Membership) joinReq(ctx context.Context, addr net.Addr) error {
 
 func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	var (
-		sender  net.Addr
-		msgType byte
+		sender net.Addr
+		msg    byte
 	)
 	defer func() {
-		ms.observer.received(ctx, allMsgTypes[msgType], sender)
+		ms.observer.received(ctx, allMsgTypes[msg], sender)
 	}()
 
 	bufConn := bufio.NewReader(conn)
-	msgType, err := bufConn.ReadByte()
+	msg, err := bufConn.ReadByte()
 	if err != nil {
 		return fmt.Errorf("read msg-type: %w", err)
 	}
@@ -157,7 +157,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	if err != nil {
 		return fmt.Errorf("parse sender: %w", err)
 	}
-	switch msgType {
+	switch msg {
 	case pingReqType:
 		ms.setState(statusAlive, sender)
 		return ms.ack(conn)
@@ -196,7 +196,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.setState(statusDead, deadAddr)
 		ms.observer.onLeave(ctx, deadAddr)
 	default:
-		return fmt.Errorf("unknown msg type: %d", msgType)
+		return fmt.Errorf("unknown msg type: %d", msg)
 	}
 	return nil
 }
