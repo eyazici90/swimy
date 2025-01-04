@@ -10,6 +10,7 @@ import (
 	"github.com/eyazici90/swimy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 )
 
 func TestSwimy_Join(t *testing.T) {
@@ -87,4 +88,8 @@ func TestSwimy_Dead(t *testing.T) {
 	ms3.Stop()
 	<-time.After(time.Millisecond * 150)
 	assert.LessOrEqual(t, len(ms1.Members()), 2)
+}
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }
