@@ -152,8 +152,8 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 	}
 
 	const bufSize uint8 = 15
-	buff := make([]byte, bufSize)
-	sender, err = readAddr(bufConn, buff)
+	buf := make([]byte, bufSize)
+	sender, err = readAddr(bufConn, buf)
 	if err != nil {
 		return fmt.Errorf("parse sender: %w", err)
 	}
@@ -162,7 +162,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.setState(statusAlive, sender)
 		return ms.ack(conn)
 	case indirectPingMsgType:
-		addr, err := readAddr(bufConn, buff)
+		addr, err := readAddr(bufConn, buf)
 		if err != nil {
 			return fmt.Errorf("parse dead addr: %w", err)
 		}
@@ -189,7 +189,7 @@ func (ms *Membership) stream(ctx context.Context, conn io.ReadWriter) error {
 		ms.setState(statusLeft, sender)
 		ms.observer.onLeave(ctx, sender)
 	case errMsgType:
-		deadAddr, err := readAddr(bufConn, buff)
+		deadAddr, err := readAddr(bufConn, buf)
 		if err != nil {
 			return fmt.Errorf("parse dead addr: %w", err)
 		}
