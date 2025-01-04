@@ -36,15 +36,19 @@ func newNetTCP(port uint16, stream func(context.Context, io.ReadWriter) error) (
 }
 
 func (nt *netTCP) listen(ctx context.Context) error {
-	quit := make(chan struct{})
-	defer close(quit)
+	term, done := make(chan struct{}), make(chan struct{})
+	defer func() {
+		<-done
+	}()
+	defer close(term)
 
 	go func() {
+		defer close(done)
 		// This is to unblock tcpLn.AcceptTCP().
 		// Given acceptTCP is a blocking call, must be closed to let it returns err.
 		// See http://zhen.org/blog/graceful-shutdown-of-go-net-dot-listeners/
 		select {
-		case <-quit:
+		case <-term:
 		case <-ctx.Done():
 		}
 		_ = nt.ln.Close()

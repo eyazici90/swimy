@@ -19,7 +19,8 @@ type Membership struct {
 	me        Member
 	others    map[net.Addr]Member
 
-	stop func()
+	wg     sync.WaitGroup
+	cancel func()
 }
 
 func New(cfg *Config) (*Membership, error) {
@@ -46,13 +47,16 @@ func New(cfg *Config) (*Membership, error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ms.stop = cancel
+	ms.cancel = cancel
+	ms.wg.Add(2)
 	go func() {
+		defer ms.wg.Done()
 		if err := ms.schedule(ctx, cfg.GossipInterval, ms.gossip); err != nil {
 			slog.ErrorContext(ctx, err.Error())
 		}
 	}()
 	go func() {
+		defer ms.wg.Done()
 		if err := nTCP.listen(ctx); err != nil {
 			slog.ErrorContext(ctx, err.Error())
 		}
@@ -89,8 +93,9 @@ func (ms *Membership) Leave(ctx context.Context) error {
 }
 
 func (ms *Membership) Stop() {
-	ms.stop()
+	ms.cancel()
 	ms.observer.onStop()
+	ms.wg.Wait()
 }
 
 func (ms *Membership) Members() []Member {
